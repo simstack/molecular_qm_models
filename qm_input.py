@@ -3,9 +3,9 @@ from typing import Optional, List, Self
 from odmantic import Model, Field, Reference, EmbeddedModel
 from pydantic import model_validator
 
-from molecular_qm_models import BasisSet
-from molecular_qm_models.density_functional import Functional
-from molecular_qm_models.molecule import Molecule
+from .basis_set import BasisSet
+from .density_functional import Functional
+from .molecule import Molecule
 
 from simstack.models import simstack_model
 from simstack.models.file_list import FileList

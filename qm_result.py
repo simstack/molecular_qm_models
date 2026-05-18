@@ -1,7 +1,9 @@
 import os
 from pathlib import Path
 from pprint import pprint
-from typing import Optional, List
+from typing import Optional, List, TYPE_CHECKING
+if TYPE_CHECKING:
+    from molecular_qm_orca.pyorca import OrcaRun
 import asyncio
 from odmantic import Model, Field
 from pydantic import model_validator
@@ -11,7 +13,6 @@ import pandas as pd
 from simstack.core.context import context
 from simstack.core.definitions import TaskStatus
 from molecular_qm_models.molecule import MoleculeList, Molecule, Atom
-from molecular_qm_orca.pyorca import OrcaRun
 from simstack.models import simstack_model
 from simstack.models.files import FileStack
 from simstack.models.file_list import FileList
@@ -82,8 +83,9 @@ class QMResult(Model):
         return data
 
     @classmethod
-    async def from_orca_output(cls, orca_run: OrcaRun, task_id: Optional[str] = None) -> "QMResult":
+    async def from_orca_output(cls, orca_run: "OrcaRun", task_id: Optional[str] = None) -> "QMResult":
         """Creates an instance of the class from an OrcaRun object."""
+        from molecular_qm_orca.pyorca import OrcaRun
         
         def molecule_from_structure(structure) -> Molecule:
             molecule = Molecule()

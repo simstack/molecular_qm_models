@@ -1,5 +1,5 @@
 from .molecule import Atom, Molecule, MoleculeList
-from .qm_input import QMInput, SCFAccuracy, OptimizationAccuracy, GridType
+from .qm_input import QMInput, QMMethod, SCFAccuracy, OptimizationAccuracy, GridType
 from .qm_result import QMResult
 from .qm_result_elprop import QMResult_elprop
 #from .qm_result_orbital_energies import QMResult_orbital_energies moved to QMResult
@@ -12,11 +12,13 @@ from .make_database_from_molecules import database_from_molecules
 from .multi_molecule_text_parser import iter_multixyz_frames, iter_sdf_frames
 from .zmatrix import ZMatrix
 from .molecule_to_pymatgen import molecule_to_pymatgen, pymatgen_to_molecule
+from .internal_coordinates import InternalCoordinate, InternalCoordinateType, InternalBondCoordinate, InternalAngleCoordinate, InternalDihedralCoordinate, InternalCoordinatesList
 __all__ = [
     "Atom",
     "Molecule",
     "MoleculeList",
     "QMInput",
+    "QMMethod",
     "QMResult",
     "QMResult_elprop",
     "BasisSet",
@@ -36,5 +38,15 @@ __all__ = [
     "iter_multixyz_frames",
     "iter_sdf_frames",
     "molecule_to_pymatgen",
-    "pymatgen_to_molecule"
+    "pymatgen_to_molecule",
+    "Bond",
+    "Angle",
+    "Dihedral",
+    "ZMatrix",
+    "InternalCoordinate",
+    "InternalCoordinateType",
+    "InternalBondCoordinate",
+    "InternalAngleCoordinate",
+    "InternalDihedralCoordinate",
+    "InternalCoordinatesList",
 ]

@@ -4,7 +4,7 @@ from typing import List, Dict, Any
 from odmantic import Field, EmbeddedModel, Model
 from pydantic import model_validator
 
-from molecular_qm_models import AuxBasis, AuxBasisEnum
+from .auxiliary_basis import AuxBasis, AuxBasisEnum
 from simstack.models import simstack_model
 
 

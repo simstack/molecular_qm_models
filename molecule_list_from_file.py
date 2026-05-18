@@ -2,12 +2,12 @@ import asyncio
 import gzip
 from pathlib import Path
 
-from molecular_qm_models import compute_smiles, compute_iupac_name
+from molecular_qm_util import compute_smiles, compute_iupac_name
 from simstack.core.context import context
 from simstack.core.node import node
 from simstack.models.files import FileStack
-from molecular_qm_models import Molecule, MoleculeList
-from applications.electronic_structure import iter_multixyz_frames, iter_sdf_frames
+from .molecule import Molecule, MoleculeList
+from .multi_molecule_text_parser import iter_multixyz_frames, iter_sdf_frames
 
 
 @node
