@@ -288,9 +288,7 @@ class QMInput(Model):
     active_electrons: int = Field(0, json_schema_extra={"description": "number of active electrons"})
     active_orbitals: int = Field(0, json_schema_extra={"description": "number of active orbitals"})
 
-    restart_files: FileList = Field(default_factory=FileList, json_schema_extra={
-         "description": "Files to be used for restarting the calculation"
-    })
+    restart_files: FileList = Field(default_factory=FileList)
     tolerate_failure: bool = Field(False, json_schema_extra={"description": "Tolerate failure of the calculation"})
 
     # UI persistence toggles (real fields so they are saved to the DB)
