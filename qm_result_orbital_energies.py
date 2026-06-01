@@ -16,7 +16,7 @@
 # from simstack.util.ui_tools import ui_hide_fields
 
 # if TYPE_CHECKING:  # pragma: no cover - only for type checking, avoids cycles
-#     from applications.electronic_structure.orca.pyorca import OrcaRun
+#     from applications.electronic_structure.orca.orca_output import OrcaOutput
 
 # logger = logging.getLogger(__name__)
 

@@ -25,7 +25,7 @@ from simstack.util.ui_tools import ui_hide_fields
 
 if TYPE_CHECKING:  # pragma: no cover - only for type checking, avoids cycles
     from .qm_result import QMResult
-    from molecular_qm_orca.pyorca import OrcaRun
+    from molecular_qm_orca.deprecated.orca_output import OrcaOutput
 
 
 logger = logging.getLogger(__name__)
@@ -299,11 +299,11 @@ class QMResult_elprop(Model):
     @classmethod
     def from_orca_output(
         cls,
-        orca_run: "OrcaRun",
+        orca_run: "OrcaOutput",
         parent_qm_result: Optional["QMResult"] = None,
         task_id: Optional[str] = None,
     ) -> "QMResult_elprop":
-        """Build a QMResult_elprop directly from an OrcaRun.
+        """Build a QMResult_elprop directly from an OrcaOutput.
 
         This mirrors the elprop-related parts of
         ``QMResult.from_orca_output`` but keeps them in a dedicated
@@ -387,7 +387,7 @@ class QMResult_elprop(Model):
                 else:
                     logger.info(
                         "Reading elprop from task_id=%s --- "
-                        "No _hyperpolarizability information on OrcaRun",
+                        "No _hyperpolarizability information on OrcaOutput",
                         task_id,
                     )
 
@@ -397,7 +397,7 @@ class QMResult_elprop(Model):
                     static_tensor,
                 )
 
-                # Dipole vector for alignment: prefer OrcaRun attribute,
+                # Dipole vector for alignment: prefer OrcaOutput attribute,
                 # fall back to the parent QMResult if present.
                 dipole_vec = getattr(orca_run, "dipole_moment", None)
                 if dipole_vec is None and parent_qm_result is not None:

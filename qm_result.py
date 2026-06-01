@@ -3,7 +3,7 @@ from pathlib import Path
 from pprint import pprint
 from typing import Optional, List, TYPE_CHECKING
 if TYPE_CHECKING:
-    from molecular_qm_orca.pyorca import OrcaRun
+    from molecular_qm_orca.deprecated.orca_output import OrcaOutput
 import asyncio
 from odmantic import Model, Field
 from pydantic import model_validator
@@ -83,10 +83,9 @@ class QMResult(Model):
         return data
 
     @classmethod
-    async def from_orca_output(cls, orca_run: "OrcaRun", task_id: Optional[str] = None) -> "QMResult":
-        """Creates an instance of the class from an OrcaRun object."""
-        from molecular_qm_orca.pyorca import OrcaRun
-        
+    async def from_orca_output(cls, orca_run: "OrcaOutput", task_id: Optional[str] = None) -> "QMResult":
+        """Creates an instance of the class from an OrcaOutput object."""
+
         def molecule_from_structure(structure) -> Molecule:
             molecule = Molecule()
             for site in structure.sites:
@@ -111,7 +110,7 @@ class QMResult(Model):
         }
 
         try:
-            # Copy simple scalar/vector quantities from the OrcaRun object.
+            # Copy simple scalar/vector quantities from the OrcaOutput object.
             # All electronic-property related keys have been removed from
             # result_dict, so a simple generic copy is sufficient here.
             for key in list(result_dict.keys()):
@@ -312,7 +311,7 @@ async def main():
     orca_dir = "/home/ws/bj7610/simstack/orca/681f77f3f25308cab1d50ef1"
     # change directory to orca_dir
     os.chdir(orca_dir)
-    orca_run = OrcaRun("orca")
+    orca_run = OrcaOutput("orca")
     orca_result = QMResult.from_orca_output(orca_run)
     result_dict = await orca_result.custom_model_dump()
     pprint(result_dict)
