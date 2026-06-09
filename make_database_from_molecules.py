@@ -3,7 +3,7 @@ from datetime import datetime
 from pathlib import Path
 from simstack.core.context import context
 from simstack.core.node import node
-from simstack.models import DataSetMetadata, DataSetTupleSection, DataSetTuple, StringData
+from simstack.models import DataSetMetadata, DataSetSection, DataSet, StringData
 from simstack.models.files import FileStack
 
 from molecular_qm_models import MoleculeList
@@ -17,8 +17,8 @@ async def database_from_molecules(molecule_list: MoleculeList, name: StringData,
         "name": name.value,
         "created_at": datetime.now()
     })
-    database = DataSetTuple(field_name="molecules", metadata=metadata)
-    section = DataSetTupleSection()
+    database = DataSet(field_name="molecules", metadata=metadata)
+    section = DataSetSection()
     database["molecules"] = section
 
     for molecule in molecule_list.molecules:
