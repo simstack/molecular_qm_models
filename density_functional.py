@@ -4,7 +4,7 @@ from typing import List, Dict, Any
 from odmantic import Field, EmbeddedModel, Model
 from pydantic import model_validator
 
-from .dispersion_correction import DispersionCorrection, DispersionCorrectionEnum
+from molecular_qm_models.dispersion_correction import DispersionCorrection, DispersionCorrectionEnum
 from simstack.models import simstack_model
 
 

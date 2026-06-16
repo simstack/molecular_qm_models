@@ -25,14 +25,14 @@ from simstack.util.ui_tools import ui_hide_fields
 
 if TYPE_CHECKING:  # pragma: no cover - only for type checking, avoids cycles
     from .qm_result import QMResult
-    from molecular_qm_orca.deprecated.orca_output import OrcaOutput
+    from applications.electronic_structure.orca.pyorca import OrcaRun
 
 
 logger = logging.getLogger(__name__)
 
 
 @simstack_model
-class QMResult_elprop(Model):
+class QMResultElProp(Model):
     """Electronic properties / polarizabilities associated with a QMResult.
 
     The field set mirrors the elprop-related attributes currently present on
@@ -233,7 +233,7 @@ class QMResult_elprop(Model):
         return base_schema
 
     @classmethod
-    def from_qm_result(cls, qm_result: "QMResult") -> "QMResult_elprop":
+    def from_qm_result(cls, qm_result: "QMResult") -> "QMResultElProp":
         """Construct a QMResult_elprop instance from an existing QMResult.
 
         This helper copies all known electronic-property fields from the
@@ -299,11 +299,11 @@ class QMResult_elprop(Model):
     @classmethod
     def from_orca_output(
         cls,
-        orca_run: "OrcaOutput",
+        orca_run: "OrcaRun",
         parent_qm_result: Optional["QMResult"] = None,
         task_id: Optional[str] = None,
-    ) -> "QMResult_elprop":
-        """Build a QMResult_elprop directly from an OrcaOutput.
+    ) -> "QMResultElProp":
+        """Build a QMResult_elprop directly from an OrcaRun.
 
         This mirrors the elprop-related parts of
         ``QMResult.from_orca_output`` but keeps them in a dedicated
@@ -312,6 +312,7 @@ class QMResult_elprop(Model):
         the dipole moment vector when aligning the hyperpolarizability
         tensor.
         """
+        from applications.electronic_structure.orca.pyorca import OrcaRun
 
         # Local helper: dict -> SimpleTable with key/value layout
         def _dict_to_key_value_table(
@@ -387,7 +388,7 @@ class QMResult_elprop(Model):
                 else:
                     logger.info(
                         "Reading elprop from task_id=%s --- "
-                        "No _hyperpolarizability information on OrcaOutput",
+                        "No _hyperpolarizability information on OrcaRun",
                         task_id,
                     )
 
@@ -397,7 +398,7 @@ class QMResult_elprop(Model):
                     static_tensor,
                 )
 
-                # Dipole vector for alignment: prefer OrcaOutput attribute,
+                # Dipole vector for alignment: prefer OrcaRun attribute,
                 # fall back to the parent QMResult if present.
                 dipole_vec = getattr(orca_run, "dipole_moment", None)
                 if dipole_vec is None and parent_qm_result is not None:

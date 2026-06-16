@@ -3,9 +3,9 @@ from typing import Optional, List, Self
 from odmantic import Model, Field, Reference, EmbeddedModel
 from pydantic import model_validator
 
-from .basis_set import BasisSet
-from .density_functional import Functional
-from .molecule import Molecule
+from molecular_qm_models.basis_set import BasisSet
+from molecular_qm_models.density_functional import Functional
+from molecular_qm_models.molecule import Molecule
 
 from simstack.models import simstack_model
 from simstack.models.file_list import FileList
@@ -288,7 +288,9 @@ class QMInput(Model):
     active_electrons: int = Field(0, json_schema_extra={"description": "number of active electrons"})
     active_orbitals: int = Field(0, json_schema_extra={"description": "number of active orbitals"})
 
-    restart_files: FileList = Field(default_factory=FileList)
+    restart_files: FileList = Field(default_factory=FileList, json_schema_extra={
+         "description": "Files to be used for restarting the calculation"
+    })
     tolerate_failure: bool = Field(False, json_schema_extra={"description": "Tolerate failure of the calculation"})
 
     # UI persistence toggles (real fields so they are saved to the DB)

@@ -1,7 +1,7 @@
 from .molecule import Atom, Molecule, MoleculeList
 from .qm_input import QMInput, QMMethod, SCFAccuracy, OptimizationAccuracy, GridType
 from .qm_result import QMResult
-from .qm_result_elprop import QMResult_elprop
+from .qm_result_elprop import QMResultElProp
 #from .qm_result_orbital_energies import QMResult_orbital_energies moved to QMResult
 from .basis_set import BasisSet, BasisSetModel, BasisSetEnum
 from .density_functional import Functional, FunctionalModel, FunctionalEnum
@@ -20,7 +20,7 @@ __all__ = [
     "QMInput",
     "QMMethod",
     "QMResult",
-    "QMResult_elprop",
+    "QMResultElProp",
     "BasisSet",
     "BasisSetModel",
     "BasisSetEnum",

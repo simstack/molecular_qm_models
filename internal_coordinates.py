@@ -5,9 +5,9 @@ import numpy as np
 from pydantic import Field as PydanticField
 from odmantic import EmbeddedModel, Model, Field
 
-from molecular_qm_models import Molecule
-from simstack.util.generic_list_mixin import GenericListMixin
-from molecular_qm_models.molecular_geometry import Bond, Angle, Dihedral
+from applications.electronic_structure import Molecule
+from simstack.models.base_lists import GenericListMixin
+from applications.electronic_structure.util.molecular_geometry import Bond, Angle, Dihedral
 
 
 class InternalCoordinateType(str, Enum):

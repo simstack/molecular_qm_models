@@ -1,9 +1,7 @@
 import os
 from pathlib import Path
 from pprint import pprint
-from typing import Optional, List, TYPE_CHECKING
-if TYPE_CHECKING:
-    from molecular_qm_orca.deprecated.orca_output import OrcaOutput
+from typing import Optional, List, TypedDict, TYPE_CHECKING
 import asyncio
 from odmantic import Model, Field
 from pydantic import model_validator
@@ -13,13 +11,32 @@ import pandas as pd
 from simstack.core.context import context
 from simstack.core.definitions import TaskStatus
 from molecular_qm_models.molecule import MoleculeList, Molecule, Atom
+if TYPE_CHECKING:
+    from applications.electronic_structure.orca.pyorca import OrcaRun
 from simstack.models import simstack_model
 from simstack.models.files import FileStack
 from simstack.models.file_list import FileList
 from simstack.models.simple_table import SimpleTable
 from simstack.util.project_root_finder import find_project_root
-
 logger = logging.getLogger(__name__)
+
+
+class QMResultDict(TypedDict, total=False):
+    charge: int
+    dipole: Optional[float]
+    final_energy: Optional[float]
+    dipole_moment: Optional[List[float]]
+    energies: List[float]
+    scf_converge: bool  # Temporary key used during parsing
+    scf_converged: bool
+    normal_termination: bool
+    optimization_converged: bool
+    scf_energies: List[float]
+    files: FileList
+    molecule_list: List  # Temporary key used during parsing
+    structures: MoleculeList
+    final_structure: Molecule
+    field_name: str
 
 
 @simstack_model
@@ -35,6 +52,7 @@ class QMResult(Model):
     error: Optional[str] = None
     task_status: Optional[TaskStatus] = None
     normal_termination: Optional[bool] = Field(default=None)
+    optimization_converged: Optional[bool] = Field(default=None)
 
     scf_energies:  List[float] = Field(default_factory=list)
     scf_converged: Optional[bool] = Field(default=None)
@@ -54,10 +72,6 @@ class QMResult(Model):
 
     dftmrci_configurations: Optional[SimpleTable] = None
     max_amplitude_not_in_ref_space: Optional[List[float]] = Field(default=None)
-
-
- 
-
 
     # Hyperpolarizability (β) – typically a small table with βzzz for up to 3 frequency pairs - was all moved to elprop Result! and should stay there!
     #hyperpolarizability: Optional[SimpleTable] = None
@@ -83,9 +97,10 @@ class QMResult(Model):
         return data
 
     @classmethod
-    async def from_orca_output(cls, orca_run: "OrcaOutput", task_id: Optional[str] = None) -> "QMResult":
-        """Creates an instance of the class from an OrcaOutput object."""
-
+    async def from_orca_output(cls, orca_run: "OrcaRun", task_id: Optional[str] = None) -> "QMResult":
+        """Creates an instance of the class from an OrcaRun object."""
+        from applications.electronic_structure.orca.pyorca import OrcaRun
+        
         def molecule_from_structure(structure) -> Molecule:
             molecule = Molecule()
             for site in structure.sites:
@@ -95,8 +110,8 @@ class QMResult(Model):
 
 
         logger.info(f"Reading results from run task_id: {task_id} V0.1")
-
-        result_dict = {
+        
+        result_dict: QMResultDict = {
             "charge": 0,
             "dipole": 0,
             "final_energy": 0,
@@ -106,11 +121,12 @@ class QMResult(Model):
             "normal_termination": False,
             "optimization_converged": False,
             "scf_energies": [],
+            "files": [],
 
         }
 
         try:
-            # Copy simple scalar/vector quantities from the OrcaOutput object.
+            # Copy simple scalar/vector quantities from the OrcaRun object.
             # All electronic-property related keys have been removed from
             # result_dict, so a simple generic copy is sufficient here.
             for key in list(result_dict.keys()):
@@ -163,7 +179,7 @@ class QMResult(Model):
             if os.path.exists(file_path):
                 file_stack = FileStack.from_local_file(file_path, in_memory=True, secure_source=True)
                 await context.db.save(file_stack)
-                file_list.append(file_stack)
+                await file_list.append(file_stack)
 
         logger.info(f"Reading results from run task_id: {task_id} V0.1 --- FileList Done")
 
@@ -171,6 +187,7 @@ class QMResult(Model):
         result_dict["final_structure"] = final_structure
 
         result_dict["files"] = file_list
+        del result_dict["molecule_list"]
         result = cls(**result_dict)
 
         logger.info(
@@ -311,7 +328,8 @@ async def main():
     orca_dir = "/home/ws/bj7610/simstack/orca/681f77f3f25308cab1d50ef1"
     # change directory to orca_dir
     os.chdir(orca_dir)
-    orca_run = OrcaOutput("orca")
+    from applications.electronic_structure.orca.pyorca import OrcaRun
+    orca_run = OrcaRun("orca")
     orca_result = QMResult.from_orca_output(orca_run)
     result_dict = await orca_result.custom_model_dump()
     pprint(result_dict)
