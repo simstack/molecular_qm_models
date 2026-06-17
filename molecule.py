@@ -126,12 +126,12 @@ class Molecule(Model):
         return new_molecule
 
     def make_smiles(self) -> str:
-        from applications.electronic_structure.util.obabel_scripts.compute_smiles import compute_smiles
+        from molecular_qm_util.obabel_scripts.compute_smiles import compute_smiles
         self.smiles = compute_smiles(self)
         return self.smiles
 
     def make_formula(self) -> str:
-        from applications.electronic_structure.util.obabel_scripts.compute_iupac_name import compute_iupac_name
+        from molecular_qm_util.obabel_scripts.compute_iupac_name import compute_iupac_name
         self.formula = compute_iupac_name(self)
         return self.formula
 

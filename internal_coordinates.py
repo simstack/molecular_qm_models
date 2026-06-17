@@ -7,7 +7,7 @@ from odmantic import EmbeddedModel, Model, Field
 
 from applications.electronic_structure import Molecule
 from simstack.models.base_lists import GenericListMixin
-from applications.electronic_structure.util.molecular_geometry import Bond, Angle, Dihedral
+from molecular_qm_models.molecular_geometry import Bond, Angle, Dihedral
 
 
 class InternalCoordinateType(str, Enum):
