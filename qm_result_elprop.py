@@ -1,6 +1,6 @@
 """Electronic-property result model (QMResult_elprop).
 
-This module defines :class:`QMResult_elprop`, a Simstack/ODMantic model that
+This module defines: class:`QMResultElProp`, a Simstack/ODMantic model that
 captures electronic properties (polarizabilities, hyperpolarizabilities,
 etc.) associated with a quantum-chemistry calculation.
 
