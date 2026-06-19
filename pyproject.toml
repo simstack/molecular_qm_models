@@ -9,8 +9,12 @@ dependencies = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["."]
+packages = ["molecular_qm_models"]
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+
+[project.entry-points."simstack.modules"]
+molecular_qm_models = "molecular_qm_models"
