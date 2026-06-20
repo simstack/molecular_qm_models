@@ -5,7 +5,7 @@ import numpy as np
 from pydantic import Field as PydanticField
 from odmantic import EmbeddedModel, Model, Field
 
-from applications.electronic_structure import Molecule
+from .molecule import Molecule
 from simstack.models.base_lists import GenericListMixin
 from molecular_qm_models.molecular_geometry import Bond, Angle, Dihedral
 
