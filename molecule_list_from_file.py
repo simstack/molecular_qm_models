@@ -2,7 +2,7 @@ import asyncio
 import gzip
 from pathlib import Path
 
-from molecular_qm_util import compute_smiles, compute_iupac_name
+
 from simstack.core.context import context
 from simstack.core.node import node
 from simstack.models.files import FileStack
@@ -12,6 +12,7 @@ from .multi_molecule_text_parser import iter_multixyz_frames, iter_sdf_frames
 
 @node
 async def molecule_list_from_file(file: FileStack, **kwargs):
+    node_runner = kwargs.get('node_runner', None)
     local_copy = file.get()
 
     # Check if the file is gzip-compressed
@@ -43,9 +44,35 @@ async def molecule_list_from_file(file: FileStack, **kwargs):
     else:
         raise ValueError(f"Unsupported file format: {suffix}. Only .sdf and .xyz are supported.")
 
+    try:
+        from molecular_qm_util import compute_smiles, compute_iupac_name
+    except ImportError:
+        if node_runner:
+            node_runner.warning("molecular_qm_util package not found. SMILES and IUPAC name computation skipped.")
+        compute_smiles = None
+        compute_iupac_name = None
+
     for molecule in molecule_list.molecules:
-        molecule.smiles = compute_smiles(molecule)
-        molecule.formula = compute_iupac_name(molecule)
+        if compute_smiles:
+            try:
+                molecule.smiles = compute_smiles(molecule)
+            except Exception as e:
+                if node_runner:
+                    node_runner.warning(f"Failed to compute SMILES for molecule: {e}")
+                molecule.smiles = "Error"
+        else:
+            molecule.smiles = "Not computed"
+            
+        if compute_iupac_name:
+            try:
+                molecule.formula = compute_iupac_name(molecule)
+            except Exception as e:
+                if node_runner:
+                    node_runner.warning(f"Failed to compute IUPAC name for molecule: {e}")
+                molecule.formula = "Error"
+        else:
+            molecule.formula = "Not computed"
+            
         await context.db.save(molecule)
     return molecule_list
 

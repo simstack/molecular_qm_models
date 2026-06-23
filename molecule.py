@@ -1,11 +1,10 @@
 import hashlib
 import math
 from copy import copy
-from typing import Dict, Any, List, Optional, Union
+from typing import Dict, Any, List, Optional
 from odmantic import Model, Field, EmbeddedModel, ObjectId
 from pydantic import model_validator
 import logging
-import openbabel
 from pathlib import Path
 
 from simstack.models import simstack_model
@@ -126,13 +125,21 @@ class Molecule(Model):
         return new_molecule
 
     def make_smiles(self) -> str:
-        from molecular_qm_util.obabel_scripts.compute_smiles import compute_smiles
-        self.smiles = compute_smiles(self)
+        try:
+            from molecular_qm_util import compute_smiles
+            self.smiles = compute_smiles(self)
+        except ImportError:
+            logger.warning("molecular_qm_util package not found. SMILES computation failed.")
+            self.smiles = "Error: molecular_qm_util missing"
         return self.smiles
 
     def make_formula(self) -> str:
-        from molecular_qm_util.obabel_scripts.compute_iupac_name import compute_iupac_name
-        self.formula = compute_iupac_name(self)
+        try:
+            from molecular_qm_util import compute_iupac_name
+            self.formula = compute_iupac_name(self)
+        except ImportError:
+            logger.warning("molecular_qm_util package not found. Formula computation failed.")
+            self.formula = "Error: molecular_qm_util missing"
         return self.formula
 
     def make_table_entries(self,**kwargs):
@@ -352,32 +359,6 @@ class Molecule(Model):
             logger.error(f"Error parsing SDF content: {e}")
             raise ValueError(f"Invalid SDF format: {e}")
 
-    @classmethod
-    def cdx_to_molecule(cls, file_path: Path):
-        """
-        Convert a ChemDraw CDX file to a Molecule object using OpenBabel.
-
-        :param file_path: Path to the CDX file
-        :return: A Molecule object
-        """
-        file_path = Path(file_path)
-        try:
-            conv = openbabel.OBConversion()
-            conv.SetInFormat("cdx")
-            mol = openbabel.OBMol()
-            conv.ReadFile(mol, str(file_path))
-
-            elements = []
-            sites = []
-
-            for atom in openbabel.OBMolAtomIter(mol):
-                elements.append(atom.GetAtomicSymbol())
-                sites.append([atom.GetX(), atom.GetY(), atom.GetZ()])
-
-            return cls.from_sites(elements, sites)
-        except Exception as e:
-            logger.error(f"Error reading CDX file {file_path}: {e}")
-            raise ValueError(f"Invalid CDX file format: {e}")
 
     @classmethod
     def from_file(cls, file_path: Path | str):
@@ -408,11 +389,9 @@ class Molecule(Model):
             return cls.from_cif(file_path.read_text())
         elif suffix == '.sdf' or suffix == '.mol':
             return cls.from_sdf(file_path.read_text())
-        elif suffix == '.cdx':
-            return cls.cdx_to_molecule(file_path)
         else:
             logger.error(f"Unsupported file format: {suffix}")
-            raise ValueError(f"Unsupported file format: {suffix}. Only XYZ, CIF, SDF, and CDX files are supported.")
+            raise ValueError(f"Unsupported file format: {suffix}. Only XYZ, CIF, and SDF files are supported.")
 
     def to_file(self, file_path: Path | str):
         """
