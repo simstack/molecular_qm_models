@@ -179,7 +179,7 @@ class QMResult(Model):
             if os.path.exists(file_path):
                 file_stack = FileStack.from_local_file(file_path, in_memory=True, secure_source=True)
                 await context.db.save(file_stack)
-                await file_list.append(file_stack)
+                file_list.append(file_stack)
 
         logger.info(f"Reading results from run task_id: {task_id} V0.1 --- FileList Done")
 
