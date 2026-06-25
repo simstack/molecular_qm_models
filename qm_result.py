@@ -187,7 +187,7 @@ class QMResult(Model):
         result_dict["final_structure"] = final_structure
 
         result_dict["files"] = file_list
-        del result_dict["molecule_list"]
+        #del result_dict["molecule_list"]
         result = cls(**result_dict)
 
         logger.info(
