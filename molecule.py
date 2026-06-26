@@ -623,19 +623,21 @@ else:
                 data["field_name"] = cls.__name__
             return data
 
-        def append(self, molecule: Molecule):
-            return self.add_molecule(molecule)
-
         def add_molecule(self, molecule: Molecule):
-            """
-            Add a molecule to the list.
-
-            :param molecule: A Molecule object to be added to the list.
-            """
-            if not hasattr(self, "_molecule_cache"):
-                self._molecule_cache = []
-            self._molecule_cache.append(molecule)
-            self.elements.append(molecule.id)
+            self.append(molecule)
+        # def append(self, molecule: Molecule):
+        #     return self.add_molecule(molecule)
+        #
+        # def add_molecule(self, molecule: Molecule):
+        #     """
+        #     Add a molecule to the list.
+        #
+        #     :param molecule: A Molecule object to be added to the list.
+        #     """
+        #     if not hasattr(self, "_molecule_cache"):
+        #         self._molecule_cache = []
+        #     self._molecule_cache.append(molecule)
+        #     self.elements.append(molecule.id)
 
         @property
         def molecules(self) -> List[Molecule]:
