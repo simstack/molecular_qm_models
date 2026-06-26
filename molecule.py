@@ -652,6 +652,26 @@ else:
                 self._molecule_cache = [mol async for mol in self]
             return self._molecule_cache
 
+        async def __aiter__(self):
+            """Async iterator that yields Molecule objects from the database.
+            
+            This allows using 'async for mol in molecule_list' syntax when the
+            MoleculeList stores references (ObjectIds) instead of embedded molecules.
+            """
+            from simstack.core.context import context
+            
+            # Ensure context is initialized
+            if not context.initialized:
+                await context.initialize()
+            
+            db = context.db
+            
+            for element_ref in self.elements:
+                mol = await db.find_one(Molecule, Molecule.id == element_ref)
+                if mol is None:
+                    logger.warning(f"Could not find Molecule with id {element_ref} in database")
+                    continue
+                yield mol
 
         @classmethod
         def from_file(cls, file_path: Path | str, start: int = 0, number: Optional[int] = None) -> "MoleculeList":
