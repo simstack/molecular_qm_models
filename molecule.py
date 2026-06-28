@@ -1,7 +1,7 @@
 import hashlib
 import math
 from copy import copy
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Iterator
 from odmantic import Model, Field, EmbeddedModel, ObjectId
 from pydantic import model_validator
 import logging
@@ -571,258 +571,265 @@ class Molecule(Model):
 
 
 NEW_MOLECULE_LIST = True
+#
+# if not NEW_MOLECULE_LIST:
+#     @simstack_model
+#     class MoleculeList(Model):
+#         """
+#         A class representing a list of Molecule objects.
+#
+#         Attributes:
+#             molecules (List[Molecule]): A list of Molecule objects.
+#         """
+#         field_name: str = "MoleculeList"
+#         molecules: List[Molecule] = Field(default_factory=list)
+#
+#         @model_validator(mode="before")
+#         @classmethod
+#         def ensure_fieldname(cls, data):
+#             """Ensure fieldname is set for existing documents"""
+#             if isinstance(data, dict) and "field_name" not in data:
+#                 data["field_name"] = cls.__name__
+#             return data
+#
+#         def append(self, molecule: Molecule):
+#             return self.add_molecule(molecule)
+#
+#         def add_molecule(self, molecule: Molecule):
+#             """
+#             Add a molecule to the list.
+#
+#             :param molecule: A Molecule object to be added to the list.
+#             """
+#             self.molecules.append(molecule)
+#
+# else:
+@simstack_model
+class MoleculeList(Model, ObjectListMixin[Molecule]):
+    """
+    A class representing a list of Molecule objects using references.
 
-if not NEW_MOLECULE_LIST:
-    @simstack_model
-    class MoleculeList(Model):
+    Attributes:
+        elements (List[ObjectId]): A list of Molecule references.
+    """
+    field_name: str = "MoleculeList"
+    elements: List[ObjectId] = Field(default_factory=list)
+
+    def __init__(self, **data):
+        data, cache = self._normalize_elements_for_init(data)
+        Model.__init__(self, **data)
+        if cache is not None:
+            self._set_cache(cache)
+
+    def __iter__(self) -> Iterator[Molecule]:
+        return ObjectListMixin.__iter__(self)
+
+    @model_validator(mode="before")
+    @classmethod
+    def ensure_fieldname(cls, data):
+        """Ensure fieldname is set for existing documents"""
+        if isinstance(data, dict) and "field_name" not in data:
+            data["field_name"] = cls.__name__
+        return data
+
+    def add_molecule(self, molecule: Molecule):
+        self.append(molecule)
+    # def append(self, molecule: Molecule):
+    #     return self.add_molecule(molecule)
+    #
+    # def add_molecule(self, molecule: Molecule):
+    #     """
+    #     Add a molecule to the list.
+    #
+    #     :param molecule: A Molecule object to be added to the list.
+    #     """
+    #     if not hasattr(self, "_molecule_cache"):
+    #         self._molecule_cache = []
+    #     self._molecule_cache.append(molecule)
+    #     self.elements.append(molecule.id)
+
+    # @property
+    # def molecules(self) -> List[Molecule]:
+    #     cache = self._g
+    #     return self.elements
+    #
+    # async def get_all_molecules(self) -> List[Molecule]:
+    #     """Load all molecules from the database and cache them."""
+    #     if not hasattr(self, "_molecule_cache") or len(self._molecule_cache) != len(self.elements):
+    #         self._molecule_cache = [mol async for mol in self]
+    #     return self._molecule_cache
+    #
+    # async def __aiter__(self):
+    #     """Async iterator that yields Molecule objects from the database.
+    #
+    #     This allows using 'async for mol in molecule_list' syntax when the
+    #     MoleculeList stores references (ObjectIds) instead of embedded molecules.
+    #     """
+    #     from simstack.core.context import context
+    #
+    #     # Ensure context is initialized
+    #     if not context.initialized:
+    #         await context.initialize()
+    #
+    #     db = context.db
+    #
+    #     for element_ref in self.elements:
+    #         mol = await db.find_one(Molecule, Molecule.id == element_ref)
+    #         if mol is None:
+    #             logger.warning(f"Could not find Molecule with id {element_ref} in database")
+    #             continue
+    #         yield mol
+
+    @classmethod
+    def from_file(cls, file_path: Path | str, start: int = 0, number: Optional[int] = None) -> "MoleculeList":
         """
-        A class representing a list of Molecule objects.
+        Load multiple molecules from a file.
 
-        Attributes:
-            molecules (List[Molecule]): A list of Molecule objects.
+        :param file_path: Path to the file containing molecule data (supports .xyz, .cif, .sdf formats with multiple molecules).
+        :param start: Index of the first molecule to read (0-based indexing).
+        :param number: Maximum number of molecules to read. If None, read all molecules from start.
+        :return: A MoleculeList object containing all molecules from the file.
         """
-        field_name: str = "MoleculeList"
-        molecules: List[Molecule] = Field(default_factory=list)
 
-        @model_validator(mode="before")
-        @classmethod
-        def ensure_fieldname(cls, data):
-            """Ensure fieldname is set for existing documents"""
-            if isinstance(data, dict) and "field_name" not in data:
-                data["field_name"] = cls.__name__
-            return data
+        file_path = Path(file_path)
 
-        def append(self, molecule: Molecule):
-            return self.add_molecule(molecule)
+        # Check if file exists
+        if not file_path.exists():
+            logger.error(f"File not found: {file_path}")
+            raise FileNotFoundError(f"File not found: {file_path}")
 
-        def add_molecule(self, molecule: Molecule):
-            """
-            Add a molecule to the list.
+        # Check if it's a file (not a directory)
+        if not file_path.is_file():
+            logger.error(f"Path is not a file: {file_path}")
+            raise ValueError(f"Path is not a file: {file_path}")
 
-            :param molecule: A Molecule object to be added to the list.
-            """
-            self.molecules.append(molecule)
+        suffix = file_path.suffix.lower()
+        content = file_path.read_text()
+        molecule_list = cls()
+        molecule_index = 0
 
-else:
-    @simstack_model
-    class MoleculeList(Model, ObjectListMixin[Molecule]):
-        """
-        A class representing a list of Molecule objects using references.
+        if suffix == '.xyz':
+            # Parse multiple XYZ molecules separated by blank lines or consecutive molecule blocks
+            lines = content.splitlines()
+            i = 0
+            while i < len(lines):
+                line = lines[i].strip()
+                if line and line[0].isdigit():
+                    try:
+                        n_atoms = int(line)
+                        # Extract this molecule's block
+                        molecule_block = '\n'.join(lines[i:i + n_atoms + 2])
 
-        Attributes:
-            elements (List[ObjectId]): A list of Molecule references.
-        """
-        field_name: str = "MoleculeList"
-        elements: List[ObjectId] = Field(default_factory=list)
-
-        @model_validator(mode="before")
-        @classmethod
-        def ensure_fieldname(cls, data):
-            """Ensure fieldname is set for existing documents"""
-            if isinstance(data, dict) and "field_name" not in data:
-                data["field_name"] = cls.__name__
-            return data
-
-        def add_molecule(self, molecule: Molecule):
-            self.append(molecule)
-        # def append(self, molecule: Molecule):
-        #     return self.add_molecule(molecule)
-        #
-        # def add_molecule(self, molecule: Molecule):
-        #     """
-        #     Add a molecule to the list.
-        #
-        #     :param molecule: A Molecule object to be added to the list.
-        #     """
-        #     if not hasattr(self, "_molecule_cache"):
-        #         self._molecule_cache = []
-        #     self._molecule_cache.append(molecule)
-        #     self.elements.append(molecule.id)
-
-        @property
-        def molecules(self) -> List[Molecule]:
-            """To maintain compatibility with existing code using .molecules"""
-            if hasattr(self, "_molecule_cache") and len(self._molecule_cache) == len(self.elements):
-                return self._molecule_cache
-            return self.elements
-
-        async def get_all_molecules(self) -> List[Molecule]:
-            """Load all molecules from the database and cache them."""
-            if not hasattr(self, "_molecule_cache") or len(self._molecule_cache) != len(self.elements):
-                self._molecule_cache = [mol async for mol in self]
-            return self._molecule_cache
-
-        async def __aiter__(self):
-            """Async iterator that yields Molecule objects from the database.
-            
-            This allows using 'async for mol in molecule_list' syntax when the
-            MoleculeList stores references (ObjectIds) instead of embedded molecules.
-            """
-            from simstack.core.context import context
-            
-            # Ensure context is initialized
-            if not context.initialized:
-                await context.initialize()
-            
-            db = context.db
-            
-            for element_ref in self.elements:
-                mol = await db.find_one(Molecule, Molecule.id == element_ref)
-                if mol is None:
-                    logger.warning(f"Could not find Molecule with id {element_ref} in database")
-                    continue
-                yield mol
-
-        @classmethod
-        def from_file(cls, file_path: Path | str, start: int = 0, number: Optional[int] = None) -> "MoleculeList":
-            """
-            Load multiple molecules from a file.
-
-            :param file_path: Path to the file containing molecule data (supports .xyz, .cif, .sdf formats with multiple molecules).
-            :param start: Index of the first molecule to read (0-based indexing).
-            :param number: Maximum number of molecules to read. If None, read all molecules from start.
-            :return: A MoleculeList object containing all molecules from the file.
-            """
-
-            file_path = Path(file_path)
-
-            # Check if file exists
-            if not file_path.exists():
-                logger.error(f"File not found: {file_path}")
-                raise FileNotFoundError(f"File not found: {file_path}")
-
-            # Check if it's a file (not a directory)
-            if not file_path.is_file():
-                logger.error(f"Path is not a file: {file_path}")
-                raise ValueError(f"Path is not a file: {file_path}")
-
-            suffix = file_path.suffix.lower()
-            content = file_path.read_text()
-            molecule_list = cls()
-            molecule_index = 0
-
-            if suffix == '.xyz':
-                # Parse multiple XYZ molecules separated by blank lines or consecutive molecule blocks
-                lines = content.splitlines()
-                i = 0
-                while i < len(lines):
-                    line = lines[i].strip()
-                    if line and line[0].isdigit():
-                        try:
-                            n_atoms = int(line)
-                            # Extract this molecule's block
-                            molecule_block = '\n'.join(lines[i:i + n_atoms + 2])
-
-                            # Check if we should include this molecule
-                            if molecule_index >= start:
-                                current_len = len(molecule_list.elements) if NEW_MOLECULE_LIST else len(molecule_list.molecules)
-                                if number is None or current_len < number:
-                                    molecule = Molecule.from_xyz(molecule_block)
-                                    molecule_list.add_molecule(molecule)
-
-                            molecule_index += 1
-                            i += n_atoms + 2
-
-                            # Stop if we've read the requested number of molecules
+                        # Check if we should include this molecule
+                        if molecule_index >= start:
                             current_len = len(molecule_list.elements) if NEW_MOLECULE_LIST else len(molecule_list.molecules)
-                            if number is not None and current_len >= number:
-                                break
-                        except (ValueError, IndexError) as e:
-                            logger.warning(f"Skipping invalid XYZ block at line {i}: {e}")
-                            i += 1
-                    else:
+                            if number is None or current_len < number:
+                                molecule = Molecule.from_xyz(molecule_block)
+                                molecule_list.add_molecule(molecule)
+
+                        molecule_index += 1
+                        i += n_atoms + 2
+
+                        # Stop if we've read the requested number of molecules
+                        current_len = len(molecule_list.elements) if NEW_MOLECULE_LIST else len(molecule_list.molecules)
+                        if number is not None and current_len >= number:
+                            break
+                    except (ValueError, IndexError) as e:
+                        logger.warning(f"Skipping invalid XYZ block at line {i}: {e}")
                         i += 1
+                else:
+                    i += 1
 
-            elif suffix == '.sdf' or suffix == '.mol':
-                # Parse multiple SDF molecules separated by $$$$
-                molecule_blocks = content.split('$$$$')
-                for block in molecule_blocks:
-                    block = block.strip()
-                    if block:
-                        try:
-                            # Check if we should include this molecule
-                            if molecule_index >= start:
-                                current_len = len(molecule_list.elements) if NEW_MOLECULE_LIST else len(molecule_list.molecules)
-                                if number is None or current_len < number:
-                                    molecule = Molecule.from_sdf(block)
-                                    molecule_list.add_molecule(molecule)
-                            # Stop if we've read the requested number of molecules
+        elif suffix == '.sdf' or suffix == '.mol':
+            # Parse multiple SDF molecules separated by $$$$
+            molecule_blocks = content.split('$$$$')
+            for block in molecule_blocks:
+                block = block.strip()
+                if block:
+                    try:
+                        # Check if we should include this molecule
+                        if molecule_index >= start:
                             current_len = len(molecule_list.elements) if NEW_MOLECULE_LIST else len(molecule_list.molecules)
-                            if number is not None and current_len >= number:
-                                break
-                        except (ValueError, IndexError) as e:
-                            logger.warning(f"Skipping invalid SDF block: {e}")
-                            molecule_index += 1
-            elif suffix == '.cif':
-                # CIF files typically contain one structure, but we support the format
-                try:
-                    # Check if we should include this molecule
-                    current_len = len(molecule_list.elements) if NEW_MOLECULE_LIST else len(molecule_list.molecules)
-                    if molecule_index >= start and (number is None or current_len < number):
-                        molecule = Molecule.from_cif(content)
-                        molecule_list.add_molecule(molecule)
-                except (ValueError, IndexError) as e:
-                    logger.error(f"Error parsing CIF file: {e}")
-                    raise ValueError(f"Invalid CIF format: {e}")
-            else:
-                logger.error(f"Unsupported file format: {suffix}")
-                raise ValueError(f"Unsupported file format: {suffix}. Only XYZ, CIF, and SDF files are supported.")
+                            if number is None or current_len < number:
+                                molecule = Molecule.from_sdf(block)
+                                molecule_list.add_molecule(molecule)
+                        # Stop if we've read the requested number of molecules
+                        current_len = len(molecule_list.elements) if NEW_MOLECULE_LIST else len(molecule_list.molecules)
+                        if number is not None and current_len >= number:
+                            break
+                    except (ValueError, IndexError) as e:
+                        logger.warning(f"Skipping invalid SDF block: {e}")
+                        molecule_index += 1
+        elif suffix == '.cif':
+            # CIF files typically contain one structure, but we support the format
+            try:
+                # Check if we should include this molecule
+                current_len = len(molecule_list.elements) if NEW_MOLECULE_LIST else len(molecule_list.molecules)
+                if molecule_index >= start and (number is None or current_len < number):
+                    molecule = Molecule.from_cif(content)
+                    molecule_list.add_molecule(molecule)
+            except (ValueError, IndexError) as e:
+                logger.error(f"Error parsing CIF file: {e}")
+                raise ValueError(f"Invalid CIF format: {e}")
+        else:
+            logger.error(f"Unsupported file format: {suffix}")
+            raise ValueError(f"Unsupported file format: {suffix}. Only XYZ, CIF, and SDF files are supported.")
 
-            return molecule_list
+        return molecule_list
 
-        async def to_file(self, file_path: Path | str):
-            """
-            Save the molecule list to a file.
+    async def to_file(self, file_path: Path | str):
+        """
+        Save the molecule list to a file.
 
-            :param file_path: Path where the molecule data should be saved.
-            """
-            file_path = Path(file_path)
+        :param file_path: Path where the molecule data should be saved.
+        """
+        file_path = Path(file_path)
 
-            # Get file extension using pathlib
-            suffix = file_path.suffix.lower()
+        # Get file extension using pathlib
+        suffix = file_path.suffix.lower()
 
-            molecules = []
-            if NEW_MOLECULE_LIST:
-                async for mol in self:
-                    molecules.append(mol)
-            else:
-                molecules = self.molecules
+        molecules = []
+        if NEW_MOLECULE_LIST:
+            async for mol in self:
+                molecules.append(mol)
+        else:
+            molecules = self.molecules
 
-            if suffix == '.xyz':
-                content = ""
-                for index, molecule in enumerate(molecules):
-                    content += f"{len(molecule.atoms)}\n"
-                    content += f"Frame {index:04d}\n"
-                    for atom in molecule.atoms:
-                        content += f"{atom.element:3s} {atom.x:.6f} {atom.y:.6f} {atom.z:.6f}\n"
-                file_path.write_text(content)
-            elif suffix == '.sdf' or suffix == '.mol':
-                content = ""
-                for molecule in molecules:
-                    # Write molecule header (3 lines: name, program, comment)
-                    content += f"Generated by MoleculeList.to_file\n"
-                    content += f"\n"
-                    content += f"\n"
+        if suffix == '.xyz':
+            content = ""
+            for index, molecule in enumerate(molecules):
+                content += f"{len(molecule.atoms)}\n"
+                content += f"Frame {index:04d}\n"
+                for atom in molecule.atoms:
+                    content += f"{atom.element:3s} {atom.x:.6f} {atom.y:.6f} {atom.z:.6f}\n"
+            file_path.write_text(content)
+        elif suffix == '.sdf' or suffix == '.mol':
+            content = ""
+            for molecule in molecules:
+                # Write molecule header (3 lines: name, program, comment)
+                content += f"Generated by MoleculeList.to_file\n"
+                content += f"\n"
+                content += f"\n"
 
-                    # Counts line
-                    n_atoms = len(molecule.atoms)
-                    content += f"{n_atoms:3d}  0  0  0  0  0  0  0  0  0999 V2000\n"
+                # Counts line
+                n_atoms = len(molecule.atoms)
+                content += f"{n_atoms:3d}  0  0  0  0  0  0  0  0  0999 V2000\n"
 
-                    # Atom block
-                    for atom in molecule.atoms:
-                        content += f"{atom.x:10.4f}{atom.y:10.4f}{atom.z:10.4f} {atom.element:3s} 0  0  0  0  0  0  0  0  0  0  0  0\n"
+                # Atom block
+                for atom in molecule.atoms:
+                    content += f"{atom.x:10.4f}{atom.y:10.4f}{atom.z:10.4f} {atom.element:3s} 0  0  0  0  0  0  0  0  0  0  0  0\n"
 
-                    # End of molecule marker
-                    content += "M  END\n"
-                    content += "$$$$\n"
-                file_path.write_text(content)
-            else:
-                logger.error(f"Unsupported file format for writing: {suffix}")
-                raise ValueError(
-                    f"Unsupported file format for writing: {suffix}. Only XYZ and SDF files are currently supported.")
+                # End of molecule marker
+                content += "M  END\n"
+                content += "$$$$\n"
+            file_path.write_text(content)
+        else:
+            logger.error(f"Unsupported file format for writing: {suffix}")
+            raise ValueError(
+                f"Unsupported file format for writing: {suffix}. Only XYZ and SDF files are currently supported.")
 
-        @classmethod
-        def ui_schema(cls):
-            ui_schema = generate_ui_schema(cls)
-            ui_schema["ui:field"] = "MoleculeListField"  # This tells RJSF to use the custom component
-            return ui_schema
+    @classmethod
+    def ui_schema(cls):
+        ui_schema = generate_ui_schema(cls)
+        ui_schema["ui:field"] = "MoleculeListField"  # This tells RJSF to use the custom component
+        return ui_schema
