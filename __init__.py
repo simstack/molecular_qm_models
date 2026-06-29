@@ -11,6 +11,7 @@ from .make_database_from_molecules import database_from_molecules
 from .multi_molecule_text_parser import iter_multixyz_frames, iter_sdf_frames
 from .zmatrix import ZMatrix
 from .internal_coordinates import InternalCoordinate, InternalCoordinateType, InternalBondCoordinate, InternalAngleCoordinate, InternalDihedralCoordinate, InternalCoordinatesList
+from .constants import BOHR_TO_ANGSTROM, ANGSTROM_TO_BOHR
 __all__ = [
     "Atom",
     "Molecule",
@@ -45,4 +46,6 @@ __all__ = [
     "InternalAngleCoordinate",
     "InternalDihedralCoordinate",
     "InternalCoordinatesList",
+    "BOHR_TO_ANGSTROM",
+    "ANGSTROM_TO_BOHR",
 ]
