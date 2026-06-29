@@ -779,7 +779,7 @@ class MoleculeList(Model, ObjectListMixin[Molecule]):
 
     # on 26.07. Decision by Prof. W - Async should no longer be used here in molecules.py
         #async def to_file(self, file_path: Path | str):
-        def to_file(self, file_path: Path | str):
+    def to_file(self, file_path: Path | str):
         """
         Save the molecule list to a file.
 
