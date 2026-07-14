@@ -33,7 +33,10 @@ class QMMethod(str, Enum):
     RPA = "RPA"
     DFTMRCI = "DFTMRCI"
     CASSCF = "CASSCF"
-
+    GFN2_XTB = "Native-GFN2-xTB"
+    GFN0_XTB = "GFN0-xTB" # only available w external grimme software
+    GFN_XTB = "Native-GFN-xTB"
+    GFN_FF  = "GFN-FF"  #only available w external grimme software
 
 class SCFAccuracy(str, Enum):
     """Enum for SCF convergence accuracy levels"""
