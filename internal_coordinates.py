@@ -1088,6 +1088,8 @@ class InternalFragmentInterpolator(InternalCoordinateBase):
         self.compute(molecule)
 
 
+
+
 # Define the Union of all derived types
 InternalCoordinate = Annotated[
     Union[

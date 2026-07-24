@@ -204,6 +204,16 @@ class Molecule(Model):
         """
         return len(self.atoms)
 
+    def __getitem__(self, index: int) -> Atom:
+        """
+        Get an atom by its index.
+
+        :param index: The index of the atom to retrieve.
+        :return: The Atom object at the specified index.
+        :rtype: Atom
+        """
+        return self.atoms[index]
+
 
     @classmethod
     def ui_schema(cls):
