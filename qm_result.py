@@ -70,6 +70,11 @@ class QMResult(Model):
     normal_modes: Optional[SimpleTable] = None
     ir_spectrum: Optional[SimpleTable] = None
 
+    enthalpy: Optional[float] = Field(default=None)
+    gibbs_free_energy: Optional[float] = Field(default=None)
+    entropy: Optional[float] = Field(default=None)
+    internal_energy: Optional[float] = Field(default=None)
+
     dftmrci_configurations: Optional[SimpleTable] = None
     max_amplitude_not_in_ref_space: Optional[List[float]] = Field(default=None)
 
