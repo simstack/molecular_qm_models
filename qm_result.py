@@ -40,6 +40,71 @@ class QMResultDict(TypedDict, total=False):
 
 
 @simstack_model
+class QMThermoResult(Model):
+    field_name: str = "QMThermoResult"
+    thermodynamics_table: Optional[SimpleTable] = None
+    detailed_thermo_table: Optional[SimpleTable] = None
+
+    zpve: Optional[float] = Field(default=None)
+    thermal_energy_correction: Optional[float] = Field(default=None)
+    enthalpy_correction: Optional[float] = Field(default=None)
+    gibbs_free_energy_correction: Optional[float] = Field(default=None)
+
+    # All thermo fields
+    E0: Optional[float] = Field(default=None)
+    B: Optional[List[float]] = Field(default=None)
+    sigma: Optional[int] = Field(default=None)
+    T: Optional[float] = Field(default=None)
+    P: Optional[float] = Field(default=None)
+    
+    S_elec: Optional[float] = Field(default=None)
+    S_trans: Optional[float] = Field(default=None)
+    S_rot: Optional[float] = Field(default=None)
+    S_vib: Optional[float] = Field(default=None)
+    S_tot: Optional[float] = Field(default=None)
+    
+    Cv_elec: Optional[float] = Field(default=None)
+    Cv_trans: Optional[float] = Field(default=None)
+    Cv_rot: Optional[float] = Field(default=None)
+    Cv_vib: Optional[float] = Field(default=None)
+    Cv_tot: Optional[float] = Field(default=None)
+    
+    Cp_elec: Optional[float] = Field(default=None)
+    Cp_trans: Optional[float] = Field(default=None)
+    Cp_rot: Optional[float] = Field(default=None)
+    Cp_vib: Optional[float] = Field(default=None)
+    Cp_tot: Optional[float] = Field(default=None)
+    
+    E_elec: Optional[float] = Field(default=None)
+    E_trans: Optional[float] = Field(default=None)
+    E_rot: Optional[float] = Field(default=None)
+    E_vib: Optional[float] = Field(default=None)
+    E_tot: Optional[float] = Field(default=None)
+    
+    H_elec: Optional[float] = Field(default=None)
+    H_trans: Optional[float] = Field(default=None)
+    H_rot: Optional[float] = Field(default=None)
+    H_vib: Optional[float] = Field(default=None)
+    H_tot: Optional[float] = Field(default=None)
+    
+    G_elec: Optional[float] = Field(default=None)
+    G_trans: Optional[float] = Field(default=None)
+    G_rot: Optional[float] = Field(default=None)
+    G_vib: Optional[float] = Field(default=None)
+    G_tot: Optional[float] = Field(default=None)
+    
+    ZPE_elec: Optional[float] = Field(default=None)
+    ZPE_trans: Optional[float] = Field(default=None)
+    ZPE_rot: Optional[float] = Field(default=None)
+    ZPE_vib: Optional[float] = Field(default=None)
+    ZPE_tot: Optional[float] = Field(default=None)
+
+    ZPE_corr: Optional[float] = Field(default=None)
+    E_corr: Optional[float] = Field(default=None)
+    H_corr: Optional[float] = Field(default=None)
+    G_corr: Optional[float] = Field(default=None)
+
+@simstack_model
 class QMResult(Model):
     field_name: str = "QMResult"
     bond_orders_json: Optional[str] = Field(default=None)
