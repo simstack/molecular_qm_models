@@ -168,13 +168,27 @@ class QMResult(Model):
 
     @classmethod
     async def from_orca_output(cls, orca_run: "OrcaRun", task_id: Optional[str] = None) -> "QMResult":
-        """Creates an instance of the class from an OrcaRun object."""
-        from applications.electronic_structure.orca.pyorca import OrcaRun
-        
+        """Creates an instance of the class from an OrcaRun / OrcaOutput object."""
+
         def molecule_from_structure(structure) -> Molecule:
+            """Convert a parsed geometry to :class:`Molecule`.
+
+            Accepts either our :class:`Molecule` (new ``OrcaOutput``) or a
+            pymatgen-like object with ``.sites`` (legacy ``OrcaRun``).
+            """
+            if structure is None:
+                raise ValueError("structure is None")
+            if isinstance(structure, Molecule):
+                return Molecule.from_atoms(
+                    list(structure.atoms),
+                    properties=dict(structure.properties) if structure.properties else None,
+                )
             molecule = Molecule()
             for site in structure.sites:
-                atom = Atom.from_coords(element=site.label, coords=site.coords)
+                element = getattr(site, "label", None) or getattr(
+                    site, "species_string", None
+                )
+                atom = Atom.from_coords(element=str(element), coords=list(site.coords))
                 molecule.add_atom(atom)
             return molecule
 
@@ -202,8 +216,11 @@ class QMResult(Model):
             for key in list(result_dict.keys()):
                 result_dict[key] = getattr(orca_run, key, result_dict[key])
 
-            # Fix historical typo in the attribute name
-            result_dict["scf_converged"] = result_dict["scf_converge"]
+            # Prefer the modern attribute name; fall back to the historical typo.
+            if getattr(orca_run, "scf_converged", None) is not None:
+                result_dict["scf_converged"] = bool(orca_run.scf_converged)
+            else:
+                result_dict["scf_converged"] = bool(result_dict["scf_converge"])
             del result_dict["scf_converge"]
 
 
@@ -228,7 +245,9 @@ class QMResult(Model):
             final_structure = await context.db.save(final_structure)
             logger.info(f"Reading results from run task_id: {task_id} V0.1 --- Final structure done")
         except Exception as e:
-            logger.info(f"Reading results from run task_id: {task_id} V0.1 --- Final structure FAILED")
+            logger.info(
+                f"Reading results from run task_id: {task_id} V0.1 --- Final structure FAILED: {e}"
+            )
             final_structure = Molecule()
 
 
