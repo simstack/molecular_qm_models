@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 from pprint import pprint
-from typing import Optional, List, TypedDict, TYPE_CHECKING
+from typing import Optional, List, TYPE_CHECKING
 import asyncio
 from odmantic import Model, Field
 from pydantic import model_validator
@@ -10,33 +10,14 @@ import pandas as pd
 
 from simstack.core.context import context
 from simstack.core.definitions import TaskStatus
-from molecular_qm_models.molecule import MoleculeList, Molecule, Atom
+from molecular_qm_models.molecule import MoleculeList, Molecule
 if TYPE_CHECKING:
     from applications.electronic_structure.orca.pyorca import OrcaRun
 from simstack.models import simstack_model
-from simstack.models.files import FileStack
 from simstack.models.file_list import FileList
 from simstack.models.simple_table import SimpleTable
 from simstack.util.project_root_finder import find_project_root
 logger = logging.getLogger(__name__)
-
-
-class QMResultDict(TypedDict, total=False):
-    charge: int
-    dipole: Optional[float]
-    final_energy: Optional[float]
-    dipole_moment: Optional[List[float]]
-    energies: List[float]
-    scf_converge: bool  # Temporary key used during parsing
-    scf_converged: bool
-    normal_termination: bool
-    optimization_converged: bool
-    scf_energies: List[float]
-    files: FileList
-    molecule_list: List  # Temporary key used during parsing
-    structures: MoleculeList
-    final_structure: Molecule
-    field_name: str
 
 
 @simstack_model
@@ -168,121 +149,16 @@ class QMResult(Model):
 
     @classmethod
     async def from_orca_output(cls, orca_run: "OrcaRun", task_id: Optional[str] = None) -> "QMResult":
-        """Creates an instance of the class from an OrcaRun / OrcaOutput object."""
+        """Legacy wrapper — delegates to ``molecular_qm_orca.qm_result_from_orca``.
 
-        def molecule_from_structure(structure) -> Molecule:
-            """Convert a parsed geometry to :class:`Molecule`.
-
-            Accepts either our :class:`Molecule` (new ``OrcaOutput``) or a
-            pymatgen-like object with ``.sites`` (legacy ``OrcaRun``).
-            """
-            if structure is None:
-                raise ValueError("structure is None")
-            if isinstance(structure, Molecule):
-                return Molecule.from_atoms(
-                    list(structure.atoms),
-                    properties=dict(structure.properties) if structure.properties else None,
-                )
-            molecule = Molecule()
-            for site in structure.sites:
-                element = getattr(site, "label", None) or getattr(
-                    site, "species_string", None
-                )
-                atom = Atom.from_coords(element=str(element), coords=list(site.coords))
-                molecule.add_atom(atom)
-            return molecule
-
-
-        logger.info(f"Reading results from run task_id: {task_id} V0.1")
-        
-        result_dict: QMResultDict = {
-            "charge": 0,
-            "dipole": 0,
-            "final_energy": 0,
-            "dipole_moment": [0, 0, 0],
-            "energies": [],
-            "scf_converge": False,
-            "normal_termination": False,
-            "optimization_converged": False,
-            "scf_energies": [],
-            "files": [],
-
-        }
-
-        try:
-            # Copy simple scalar/vector quantities from the OrcaRun object.
-            # All electronic-property related keys have been removed from
-            # result_dict, so a simple generic copy is sufficient here.
-            for key in list(result_dict.keys()):
-                result_dict[key] = getattr(orca_run, key, result_dict[key])
-
-            # Prefer the modern attribute name; fall back to the historical typo.
-            if getattr(orca_run, "scf_converged", None) is not None:
-                result_dict["scf_converged"] = bool(orca_run.scf_converged)
-            else:
-                result_dict["scf_converged"] = bool(result_dict["scf_converge"])
-            del result_dict["scf_converge"]
-
-
-        except Exception as e:
-            logger.info(f"Reading results from run task_id: {task_id} V0.1 --- Values FAILED {e}")
-
-        files_dict = {
-            "engrad_file": "orca.engrad",
-            "opt_file": "orca.opt",
-            "property_file": "orca.property.txt",
-            "xyz_file": "orca.xyz",
-            "gbw_file": "orca.gbw",
-            "densities": "orca.densities",
-            "hessian": "orca.hess",
-            "trajectory": "orca_trj.xyz",
-            "dft_mrci_input": "orca.DFTMRCI.inp",
-            "bkji": "orca.bkji",
-        }
-
-        try:
-            final_structure = molecule_from_structure(orca_run.final_structure)
-            final_structure = await context.db.save(final_structure)
-            logger.info(f"Reading results from run task_id: {task_id} V0.1 --- Final structure done")
-        except Exception as e:
-            logger.info(
-                f"Reading results from run task_id: {task_id} V0.1 --- Final structure FAILED: {e}"
-            )
-            final_structure = Molecule()
-
-
-        molecule_list = MoleculeList()
-        try:
-            for structure in orca_run.structures:
-                molecule = molecule_from_structure(structure)
-                molecule = await context.db.save(molecule)
-                molecule_list.add_molecule(molecule)
-            await context.db.save(molecule_list)
-            logger.info(f"Reading results from run task_id: {task_id} V0.1 --- Structures done")
-        except Exception as e:
-            logger.info(f"Reading results from run task_id: {task_id} V0.1 --- Structures FAILED {e}")
-            final_structure = Molecule()
-
-        file_list = FileList()
-        for key, file_path in files_dict.items():
-            if os.path.exists(file_path):
-                file_stack = FileStack.from_local_file(file_path, in_memory=True, secure_source=True)
-                await context.db.save(file_stack)
-                file_list.append(file_stack)
-
-        logger.info(f"Reading results from run task_id: {task_id} V0.1 --- FileList Done")
-
-        result_dict["structures"] = molecule_list
-        result_dict["final_structure"] = final_structure
-
-        result_dict["files"] = file_list
-        #del result_dict["molecule_list"]
-        result = cls(**result_dict)
-
-        logger.info(
-            f"Reading results from run task_id: {task_id} V0.1 --- Result creation done"
+        Prefer importing and calling
+        :func:`molecular_qm_orca.qm_result_from_orca.from_orca_output` directly.
+        """
+        from molecular_qm_orca.lib.qm_result_from_orca import (
+            from_orca_output as _from_orca_output,
         )
-        return result
+
+        return await _from_orca_output(orca_run, task_id=task_id)
 
 
     def set_values_from_orbital_energies_dataframe(self, df: pd.DataFrame) -> None:
