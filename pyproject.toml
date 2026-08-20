@@ -30,6 +30,7 @@ bypass-selection = true
 "make_database_from_molecules.py" = "molecular_qm_models/make_database_from_molecules.py"
 "molecular_geometry.py" = "molecular_qm_models/molecular_geometry.py"
 "molecule.py" = "molecular_qm_models/molecule.py"
+"molecule_snapshot.py" = "molecular_qm_models/molecule_snapshot.py"
 "molecule_list_from_file.py" = "molecular_qm_models/molecule_list_from_file.py"
 "multi_molecule_text_parser.py" = "molecular_qm_models/multi_molecule_text_parser.py"
 "qm_input.py" = "molecular_qm_models/qm_input.py"
