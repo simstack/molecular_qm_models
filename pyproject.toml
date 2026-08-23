@@ -37,6 +37,7 @@ bypass-selection = true
 "qm_result_elprop.py" = "molecular_qm_models/qm_result_elprop.py"
 "qm_result_orbital_energies.py" = "molecular_qm_models/qm_result_orbital_energies.py"
 "zmatrix.py" = "molecular_qm_models/zmatrix.py"
+"sanitize_smiles.py" = "molecular_qm_models/sanitize_smiles.py"
 
 [project.entry-points."simstack.modules"]
 molecular_qm_models = "molecular_qm_models"
