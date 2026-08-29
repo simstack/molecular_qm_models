@@ -19,6 +19,7 @@ bypass-selection = true
 
 [tool.hatch.build.targets.wheel.force-include]
 "__init__.py" = "molecular_qm_models/__init__.py"
+"align_molecules.py" = "molecular_qm_models/align_molecules.py"
 "auxiliary_basis.py" = "molecular_qm_models/auxiliary_basis.py"
 "basis_set.py" = "molecular_qm_models/basis_set.py"
 "constants.py" = "molecular_qm_models/constants.py"
@@ -30,6 +31,7 @@ bypass-selection = true
 "make_database_from_molecules.py" = "molecular_qm_models/make_database_from_molecules.py"
 "molecular_geometry.py" = "molecular_qm_models/molecular_geometry.py"
 "molecule.py" = "molecular_qm_models/molecule.py"
+"prune_conformers.py" = "molecular_qm_models/prune_conformers.py"
 "molecule_snapshot.py" = "molecular_qm_models/molecule_snapshot.py"
 "molecule_list_from_file.py" = "molecular_qm_models/molecule_list_from_file.py"
 "multi_molecule_text_parser.py" = "molecular_qm_models/multi_molecule_text_parser.py"
