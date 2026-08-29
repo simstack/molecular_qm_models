@@ -13,6 +13,8 @@ from .zmatrix import ZMatrix
 from .internal_coordinates import InternalCoordinate, InternalCoordinateType, InternalBondCoordinate, InternalAngleCoordinate, InternalDihedralCoordinate, InternalCoordinatesList
 from .constants import BOHR_TO_ANGSTROM, ANGSTROM_TO_BOHR
 from .sanitize_smiles import sanitize_smiles_for_filename
+from .prune_conformers import prune_conformers, prune_conformers_by_angle
+from .diversity_analysis import analyze_conformer_diversity, analyze_conformer_diversity_by_dihedrals
 __all__ = [
     "Atom",
     "Molecule",
@@ -51,4 +53,8 @@ __all__ = [
     "BOHR_TO_ANGSTROM",
     "ANGSTROM_TO_BOHR",
     "sanitize_smiles_for_filename",
+    "prune_conformers",
+    "prune_conformers_by_angle",
+    "analyze_conformer_diversity",
+    "analyze_conformer_diversity_by_dihedrals",
 ]
