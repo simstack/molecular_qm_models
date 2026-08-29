@@ -2,7 +2,7 @@ import numpy as np
 from typing import List, Union, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from molecular_qm_models import Molecule
+    from .molecule import Molecule
 
 # Constant to decide whether angles are in degrees or radians
 USE_DEGREES = True

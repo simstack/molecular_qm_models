@@ -1,43 +1,26 @@
 [project]
 name = "molecular_qm_models"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Molecular QM Models"
-requires-python = ">=3.12"
+requires-python = ">=3.12, <3.13"
 dependencies = [
     "pydantic",
     "numpy",
+    "simstack @ git+https://github.com/simstack/simstack.git@fix-node-submission-logic",
 ]
 
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.version]
+source = "vcs"
+
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
-# Flat repo layout: modules live at the repo root, but must install as
-# molecular_qm_models.* (nested package name).
 [tool.hatch.build.targets.wheel]
-bypass-selection = true
-
-[tool.hatch.build.targets.wheel.force-include]
-"__init__.py" = "molecular_qm_models/__init__.py"
-"auxiliary_basis.py" = "molecular_qm_models/auxiliary_basis.py"
-"basis_set.py" = "molecular_qm_models/basis_set.py"
-"constants.py" = "molecular_qm_models/constants.py"
-"constraints.py" = "molecular_qm_models/constraints.py"
-"density_functional.py" = "molecular_qm_models/density_functional.py"
-"dispersion_correction.py" = "molecular_qm_models/dispersion_correction.py"
-"energy_units.py" = "molecular_qm_models/energy_units.py"
-"internal_coordinates.py" = "molecular_qm_models/internal_coordinates.py"
-"make_database_from_molecules.py" = "molecular_qm_models/make_database_from_molecules.py"
-"molecular_geometry.py" = "molecular_qm_models/molecular_geometry.py"
-"molecule.py" = "molecular_qm_models/molecule.py"
-"molecule_list_from_file.py" = "molecular_qm_models/molecule_list_from_file.py"
-"multi_molecule_text_parser.py" = "molecular_qm_models/multi_molecule_text_parser.py"
-"qm_input.py" = "molecular_qm_models/qm_input.py"
-"qm_result.py" = "molecular_qm_models/qm_result.py"
-"qm_result_elprop.py" = "molecular_qm_models/qm_result_elprop.py"
-"qm_result_orbital_energies.py" = "molecular_qm_models/qm_result_orbital_energies.py"
-"zmatrix.py" = "molecular_qm_models/zmatrix.py"
-"sanitize_smiles.py" = "molecular_qm_models/sanitize_smiles.py"
+packages = ["molecular_qm_models"]
 
 [project.entry-points."simstack.modules"]
 molecular_qm_models = "molecular_qm_models"
