@@ -18,6 +18,14 @@ class InternalCoordinateType(str, Enum):
     INTERPOLATOR = "interpolator"
     FRAGMENT_ATOM = "fragment_atom"
 
+class InternalCoordinateBondType(str,Enum):
+    SINGLE = "single"
+    DOUBLE = "double"
+    TRIPLE = "triple"
+    AROMATIC = "aromatic"
+    HYDROGEN = "hydrogen"
+    UNKNOWN = "unknown"
+
 class InternalCoordinateBase(EmbeddedModel):
     type: InternalCoordinateType
     atom_indices: List[int]
@@ -137,6 +145,7 @@ class InternalCoordinateBase(EmbeddedModel):
 
 class InternalBondCoordinate(InternalCoordinateBase):
     type: Literal[InternalCoordinateType.BOND] = InternalCoordinateType.BOND
+    bond: InternalCoordinateBondType = InternalCoordinateBondType.UNKNOWN
     @classmethod
     def initialize(cls, atom1: int, atom2: int, min_value: float, max_value: float, molecule: Molecule = None):
         moving_atoms = []
@@ -279,6 +288,7 @@ class InternalAngleCoordinate(InternalCoordinateBase):
 
 class InternalDihedralCoordinate(InternalCoordinateBase):
     type: Literal[InternalCoordinateType.DIHEDRAL] = InternalCoordinateType.DIHEDRAL
+    bond_type: InternalCoordinateBondType = InternalCoordinateBondType.UNKNOWN
     @classmethod
     def initialize(cls, atom1: int, atom2: int, atom3: int, atom4: int, min_value: float, max_value: float, molecule: Molecule = None):
         moving_atoms = []
