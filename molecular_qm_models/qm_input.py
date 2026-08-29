@@ -8,6 +8,7 @@ from molecular_qm_models.density_functional import Functional
 from molecular_qm_models.molecule import Molecule
 
 from simstack.models import simstack_model
+from simstack.models.files import FileStack
 from simstack.models.file_list import FileList
 from simstack.util.cleaned_json_schema import cleaned_json_schema
 from simstack.util.generate_ui_schema import generate_ui_schema

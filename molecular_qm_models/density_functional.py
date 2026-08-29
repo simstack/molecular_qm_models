@@ -110,6 +110,9 @@ class FunctionalEnum(str,Enum):
     
     # Double-Hybrid Functionals
     B2PLYP = "B2PLYP"
+    DSD_PBEP86 = "DSD-PBEP86"
+    DSD_PBEP86_D3BJ = "DSD-PBEP86-D3BJ"
+    DSD_PBEP86_NL = "DSD-PBEP86-NL"
     
     # Range-Separated Hybrid Functionals
     CAM_B3LYP = "CAM-B3LYP"
@@ -118,6 +121,12 @@ class FunctionalEnum(str,Enum):
     WB97XD3 = "wB97X-D3"#orca
     WB97X = "wB97X" #orca
     WB97= "wB97"#orca
+    WB97M_D3BJ = "wB97M-D3BJ"
+    WB97M_V = "wB97M-V"
+    WB97X_D3ZERO2B = "wB97X-D3ZERO2B"
+    WB97X_D3ZEROATM = "wB97X-D3ZEROATM"
+    WB97X_V = "wB97X-V"
+    WB97X3C = "wB97X-3C"
     LCBLYP = "LC-BLYP" #orca
     LCPBE = "LC-PBE" #orca
 
@@ -150,8 +159,21 @@ class FunctionalEnum(str,Enum):
             cls.M06L: "Meta-GGA functional, good for organometallics",
             cls.M062X: "Hybrid meta-GGA (54% HF), good for main group thermochemistry",
             cls.CAM_B3LYP: "Range-separated hybrid, good for excited states",
-            cls.WB97XD: "Range-separated hybrid with empirical dispersion",
-            cls.B2PLYP: "Double hybrid (53% MP2), high accuracy for small molecules"
+            cls.WB97: "wB97 GGA Exchange-Correlation Functional",
+            cls.WB97M_D3BJ: "wB97M-V with D3(BJ) instead of VV10 dispersion",
+            cls.WB97M_V: "wB97M-V Hyb-GGA Exchange-Correlation Functional",
+            cls.WB97X: "wB97X Hyb-GGA Exchange-Correlation Functional",
+            cls.WB97XD: "wB97X-D Hyb-GGA Exchange-Correlation Functional",
+            cls.WB97XD3: "wB97X-D3 Hyb-GGA Exchange-Correlation Functional",
+            cls.WB97XD3BJ: "wB97X-V with D3(BJ) instead of VV10 dispersion",
+            cls.WB97X_D3ZERO2B: "wB97X-d3zero2b Hyb-GGA Exchange-Correlation Functional",
+            cls.WB97X_D3ZEROATM: "wB97X-d3zeroatm Hyb-GGA Exchange-Correlation Functional",
+            cls.WB97X_V: "wB97X-V Hyb-GGA Exchange-Correlation Functional",
+            cls.WB97X3C: "wB97X based 3C composite method with a small basis set, gCP and D4",
+            cls.B2PLYP: "Double hybrid (53% MP2), high accuracy for small molecules",
+            cls.DSD_PBEP86: "Dispersion-corrected, spin-component scaled double-hybrid functional",
+            cls.DSD_PBEP86_D3BJ: "DSD-PBEP86 with D3(BJ) dispersion correction",
+            cls.DSD_PBEP86_NL: "DSD-PBEP86 with NL (non-local) dispersion correction"
         }
         return descriptions.get(functional, "No description available")
 
@@ -205,9 +227,27 @@ class Functional(EmbeddedModel):
             return "Hybrid GGA"
         elif self.functional in [FunctionalEnum.TPSS, FunctionalEnum.M06L]:
             return "Meta-GGA"
-        elif self.functional in [FunctionalEnum.CAM_B3LYP, FunctionalEnum.WB97XD]:
+        elif self.functional in [
+            FunctionalEnum.CAM_B3LYP,
+            FunctionalEnum.WB97XD,
+            FunctionalEnum.WB97XD3BJ,
+            FunctionalEnum.WB97XD3,
+            FunctionalEnum.WB97X,
+            FunctionalEnum.WB97,
+            FunctionalEnum.WB97M_D3BJ,
+            FunctionalEnum.WB97M_V,
+            FunctionalEnum.WB97X_D3ZERO2B,
+            FunctionalEnum.WB97X_D3ZEROATM,
+            FunctionalEnum.WB97X_V,
+            FunctionalEnum.WB97X3C
+        ]:
             return "Range-Separated Hybrid"
-        elif self.functional == FunctionalEnum.B2PLYP:
+        elif self.functional in [
+            FunctionalEnum.B2PLYP,
+            FunctionalEnum.DSD_PBEP86,
+            FunctionalEnum.DSD_PBEP86_D3BJ,
+            FunctionalEnum.DSD_PBEP86_NL
+        ]:
             return "Double Hybrid"
         return "Unknown"
 
