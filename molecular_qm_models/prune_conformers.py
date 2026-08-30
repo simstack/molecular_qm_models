@@ -1,10 +1,10 @@
-from typing import List
+from typing import List, Union
 
 import numpy as np
 
 from molecular_qm_models import Molecule, MoleculeList
 from molecular_qm_models.align_molecules import align_molecules
-from molecular_qm_models.internal_coordinates import InternalDihedralCoordinate
+from molecular_qm_models.internal_coordinates import InternalDihedralCoordinate, InternalCoordinatesList
 from molecular_qm_models.molecular_geometry import Dihedral
 
 
@@ -66,7 +66,7 @@ def prune_conformers(molecules: MoleculeList, rms_thresh: float) -> MoleculeList
 
 
 def _dihedral_values(
-    molecule: Molecule, dihedrals: List[InternalDihedralCoordinate]
+    molecule: Molecule, dihedrals: Union[InternalCoordinatesList, List[InternalDihedralCoordinate]]
 ) -> np.ndarray:
     """Return the dihedral angles (degrees) of ``molecule`` for each coordinate."""
     return np.array(
@@ -80,7 +80,7 @@ def _dihedral_values(
 
 def prune_conformers_by_angle(
     molecules: MoleculeList,
-    dihedrals: List[InternalDihedralCoordinate],
+    dihedrals: Union[InternalCoordinatesList, List[InternalDihedralCoordinate]],
     angle_thresh: float = 15.0,
 ) -> MoleculeList:
     """

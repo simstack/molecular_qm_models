@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 from enum import Enum
-from typing import List, Dict, Union, Annotated, Literal
+from typing import List, Dict, Union, Annotated, Literal, Iterator
 import numpy as np
 
-from pydantic import Field as PydanticField
+from pydantic import Field as PydanticField, model_validator
 from odmantic import EmbeddedModel, Model, Field
 
 from .molecule import Molecule
@@ -532,9 +534,9 @@ class InternalFragmentAtomCoordinate(InternalCoordinateBase):
 class InternalFragmentCoordinate(InternalCoordinateBase):
     type: Literal[InternalCoordinateType.FRAGMENT] = InternalCoordinateType.FRAGMENT
     fragment_indices: List[int] = []
-    bonds: List[InternalBondCoordinate] = []
-    angles: List[InternalAngleCoordinate] = []
-    dihedrals: List[InternalDihedralCoordinate] = []
+    bonds: InternalCoordinatesList = Field(default_factory=lambda: InternalCoordinatesList())
+    angles: InternalCoordinatesList = Field(default_factory=lambda: InternalCoordinatesList())
+    dihedrals: InternalCoordinatesList = Field(default_factory=lambda: InternalCoordinatesList())
 
     def __str__(self):
         fragment_str = ','.join(str(idx + 1) for idx in self.fragment_indices)
@@ -620,7 +622,6 @@ class InternalFragmentCoordinate(InternalCoordinateBase):
                 max_values=[max_val],
                 moving_atoms=moving
             ))
-        bonds = []
         angles = []
         for a in internal_angles_indices:
             p1_1 = np.array(mol1.atoms[a[0]].position)
@@ -641,7 +642,6 @@ class InternalFragmentCoordinate(InternalCoordinateBase):
                 max_values=[max_val],
                 moving_atoms=moving
             ))
-        angles = []
         dihedrals = []
         for d in internal_dihedrals_indices:
             p1_1 = np.array(mol1.atoms[d[0]].position)
@@ -689,9 +689,9 @@ class InternalFragmentCoordinate(InternalCoordinateBase):
         return cls(type=InternalCoordinateType.FRAGMENT, 
                    atom_indices=involved_atoms_list, 
                    fragment_indices=fragment_indices,
-                   bonds=bonds,
-                   angles=angles,
-                   dihedrals=dihedrals,
+                   bonds=InternalCoordinatesList(elements=bonds),
+                   angles=InternalCoordinatesList(elements=angles),
+                   dihedrals=InternalCoordinatesList(elements=dihedrals),
                    min_values=[], max_values=[], # Not used anymore
                    value=0.0)
 
@@ -1113,7 +1113,24 @@ InternalCoordinate = Annotated[
 ]
 
 class InternalCoordinatesList(Model, GenericListMixin[InternalCoordinate]):
+    field_name: str = "internal_coordinates_list"
     elements: List[InternalCoordinate] = Field(default_factory=list, description="List of internal coordinates")
+
+    @model_validator(mode="before")
+    @classmethod
+    def wrap_list(cls, data):
+        if isinstance(data, list):
+            return {"elements": data}
+        return data
+
+    def __iter__(self) -> Iterator[InternalCoordinate]:
+        return iter(self.elements)
+
+    def __len__(self) -> int:
+        return len(self.elements)
+
+    def __getitem__(self, index):
+        return self.elements[index]
 
     @classmethod
     def from_molecule(cls, molecule: Molecule) -> "InternalCoordinatesList":
@@ -1236,6 +1253,9 @@ class InternalCoordinatesList(Model, GenericListMixin[InternalCoordinate]):
                 dc = InternalDihedralCoordinate.initialize(atoms[0], atoms[1], atoms[2], atoms[3], min_d, max_d, mol1)
                 ic_list.elements.append(dc)
         return ic_list
+
+
+InternalFragmentCoordinate.model_rebuild()
 
 
 def get_fragment_connection_coords(mol: Molecule, atom_indices: List[int]) -> Dict[str, float]:

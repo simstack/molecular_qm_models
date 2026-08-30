@@ -13,7 +13,7 @@ from simstack.models.charts_artifact import (
 )
 
 from .align_molecules import align_molecules
-from .internal_coordinates import InternalDihedralCoordinate
+from .internal_coordinates import InternalDihedralCoordinate, InternalCoordinatesList
 from .molecular_geometry import Dihedral
 from .molecule import Molecule, MoleculeList
 
@@ -158,7 +158,7 @@ def analyze_conformer_diversity(molecules: MoleculeList, **kwargs) -> NodeRunner
 @node
 def analyze_conformer_diversity_by_dihedrals(
     molecules: MoleculeList,
-    dihedrals: List[InternalDihedralCoordinate],
+    dihedrals: InternalCoordinatesList,
     **kwargs,
 ) -> NodeRunner:
     """
