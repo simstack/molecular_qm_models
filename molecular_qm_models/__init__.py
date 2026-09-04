@@ -1,5 +1,5 @@
 from .molecule import Atom, Molecule, MoleculeList
-from .molecule_snapshot import MoleculeSnapshot
+from .molecule_snapshot import MoleculeSnapshot, geometry_hash_from_molecule
 from .qm_input import QMInput, QMMethod, SCFAccuracy, OptimizationAccuracy, GridType
 from .qm_result import QMResult, QMThermoResult
 from .qm_result_elprop import QMResultElProp
@@ -21,6 +21,7 @@ __all__ = [
     "Molecule",
     "MoleculeList",
     "MoleculeSnapshot",
+    "geometry_hash_from_molecule",
     "QMInput",
     "QMMethod",
     "QMResult",
