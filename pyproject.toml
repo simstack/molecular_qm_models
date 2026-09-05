@@ -6,7 +6,7 @@ requires-python = ">=3.12, <3.13"
 dependencies = [
     "pydantic",
     "numpy",
-    "simstack @ git+https://github.com/simstack/simstack.git@fix-node-submission-logic",
+    "simstack",
 ]
 
 [tool.hatch.metadata]
@@ -27,3 +27,7 @@ packages = ["molecular_qm_models"]
 
 [project.entry-points."simstack.modules"]
 molecular_qm_models = "molecular_qm_models"
+
+[tool.uv.sources]
+simstack = { git = "https://github.com/simstack/simstack.git", branch = "main" }
+
