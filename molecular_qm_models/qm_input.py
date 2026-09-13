@@ -243,6 +243,12 @@ class QMInput(Model):
     """
     model_config = {"extra": "ignore"}
     field_name: str = "QMInput"
+    name: Optional[str] = Field(
+        None,
+        json_schema_extra={
+            "description": "Optional label for this calculation (used as the node custom_name)"
+        },
+    )
 
     molecule: Molecule = Reference()
     charge: int = Field(0, json_schema_extra={"description": "net charge of the molecule"})
@@ -442,12 +448,13 @@ class QMInput(Model):
         if 'gradients' in schema['properties']:
             del schema['properties']['gradients']
 
-        # Force type to string for first_line to avoid dropdown for Optional[str]
-        if 'first_line' in schema['properties']:
-            first_line_schema = schema['properties']['first_line']
-            if 'anyOf' in first_line_schema:
-                first_line_schema['type'] = 'string'
-                del first_line_schema['anyOf']
+        # Force type to string for Optional[str] fields to avoid a null/string dropdown
+        for optional_str_field in ("first_line", "name"):
+            if optional_str_field in schema['properties']:
+                field_schema = schema['properties'][optional_str_field]
+                if 'anyOf' in field_schema:
+                    field_schema['type'] = 'string'
+                    del field_schema['anyOf']
 
         # Extract and remove schemas for conditional fields from top-level properties
         prop_schemas = schema['properties']
