@@ -39,6 +39,12 @@ class QMMethod(str, Enum):
     GFN_XTB = "Native-GFN-xTB" #native in orca
     GFN_FF  = "GFN-FF"  #only available w external grimme software
 
+# Methods that always compute excited states. The UI matcher ANDs
+# ui:condition keys, so these fields are gated on method the same way
+# functional is gated on DFT/TDDFT (method.ui:options), not on the
+# optional "Calculate excited states" checkbox.
+EXCITED_STATE_METHODS = ("TDDFT", "CIS", "RPA", "CASSCF", "DFTMRCI")
+
 class SCFAccuracy(str, Enum):
     """Enum for SCF convergence accuracy levels"""
     Sloppy = "Sloppy"  # very weak convergence
@@ -354,8 +360,12 @@ class QMInput(Model):
                     if k not in data:
                         data[k] = v
 
+            method = data.get("method")
+            method_value = method.value if isinstance(method, Enum) else method
+            method_is_excited = method_value in EXCITED_STATE_METHODS
+
             if "excited_states" not in data:
-                data["excited_states"] = data.get("states", 0) > 0
+                data["excited_states"] = data.get("states", 0) > 0 or method_is_excited
 
             if "compute_properties" not in data:
                 elprop_fields = ["Dipole", "Quadrupole", "Polar", "Hyperpol", "PolarVelocity", "PolarDipQuad", "PolarQuadQuad"]
@@ -368,7 +378,9 @@ class QMInput(Model):
                     data[f] = False
                 data["HyperpolFrequencynm"] = 0.0
 
-            if not data.get("excited_states"):
+            # Inherent excited-state methods keep states/focus_state even
+            # when the optional checkbox is off.
+            if not data.get("excited_states") and not method_is_excited:
                 for f in ["states", "focus_state", "active_electrons", "active_orbitals"]:
                     if f == "states":
                         data[f] = 0
@@ -465,6 +477,16 @@ class QMInput(Model):
         # Excited state fields
         es_fields = ["states", "focus_state", "active_electrons", "active_orbitals"]
         es_schemas = {field: prop_schemas.pop(field) for field in es_fields if field in prop_schemas}
+        state_count_schemas = {
+            field: es_schemas[field]
+            for field in ("states", "focus_state")
+            if field in es_schemas
+        }
+        active_space_schemas = {
+            field: es_schemas[field]
+            for field in ("active_electrons", "active_orbitals")
+            if field in es_schemas
+        }
 
         # Non-standard inputs
         nsi_fields = ['first_line', 'blocks', 'restart_files']
@@ -562,20 +584,36 @@ class QMInput(Model):
                 "oneOf": [
                     {
                         "properties": {
-                            "method": {"enum": ["CASSCF", "DFTMRCI"]}
+                            "method": {"enum": ["CASSCF", "DFTMRCI"]},
+                            **state_count_schemas,
+                            **active_space_schemas,
                         }
                     },
                     {
                         "properties": {
-                            "method": {"enum": ["DFT", "TDDFT"]},
+                            "method": {"enum": ["TDDFT"]},
+                            "functional": functional_schema,
+                            **state_count_schemas,
+                        },
+                        "required": ["functional"] if functional_schema else []
+                    },
+                    {
+                        "properties": {
+                            "method": {"enum": ["DFT"]},
                             "functional": functional_schema
                         },
                         "required": ["functional"] if functional_schema else []
                     },
                     {
                         "properties": {
+                            "method": {"enum": ["CIS", "RPA"]},
+                            **state_count_schemas,
+                        }
+                    },
+                    {
+                        "properties": {
                             "method": {
-                                "not": {"enum": ["CASSCF", "DFTMRCI", "DFT", "TDDFT"]}
+                                "not": {"enum": ["CASSCF", "DFTMRCI", "DFT", "TDDFT", "CIS", "RPA"]}
                             }
                         }
                     }
@@ -645,34 +683,39 @@ class QMInput(Model):
             "Hyperpol": True
         }
 
-        # excited_states toggle
+        # TDDFT/CASSCF force the checkbox on so states and focus_state appear
+        # without an extra click. Ground-state methods still use the toggle.
         ui_schema["excited_states"] = {
             "ui:widget": "checkbox",
-            "ui:title": "Calculate excited states"
+            "ui:title": "Calculate excited states",
+            "ui:disabledCondition": {
+                "method": {"ui:options": list(EXCITED_STATE_METHODS)}
+            },
+            "ui:disabledValue": True,
         }
 
-        # Add conditions for excited state fields
-        for field in ["states", "focus_state", "active_orbitals", "active_electrons"]:
-            ui_schema[field] = {
-                "ui:condition": {
-                    "excited_states": True
-                }
+        # Same visibility for both fields. Do not AND a CASSCF-only method
+        # restriction onto focus_state — that hid it while states still showed.
+        ui_schema["states"] = {
+            "ui:condition": {
+                "excited_states": True
             }
-
-        # focus_state additionally depends on method
-        ui_schema["focus_state"]["ui:condition"] = {
-            "excited_states": True,
-            "method": ["CASSCF", "DFTMRCI"]
+        }
+        ui_schema["focus_state"] = {
+            "ui:condition": {
+                "excited_states": True
+            }
         }
 
-        # active_orbitals and active_electrons also depend on method
-        ui_schema["active_orbitals"]["ui:condition"] = {
-            "excited_states": True,
-            "method": ["CASSCF", "DFTMRCI"]
+        ui_schema["active_orbitals"] = {
+            "ui:condition": {
+                "method": {"ui:options": ["CASSCF", "DFTMRCI"]}
+            }
         }
-        ui_schema["active_electrons"]["ui:condition"] = {
-            "excited_states": True,
-            "method": ["CASSCF", "DFTMRCI"]
+        ui_schema["active_electrons"] = {
+            "ui:condition": {
+                "method": {"ui:options": ["CASSCF", "DFTMRCI"]}
+            }
         }
 
         ui_schema["optimization_accuracy"] = {
