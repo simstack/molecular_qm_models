@@ -477,16 +477,6 @@ class QMInput(Model):
         # Excited state fields
         es_fields = ["states", "focus_state", "active_electrons", "active_orbitals"]
         es_schemas = {field: prop_schemas.pop(field) for field in es_fields if field in prop_schemas}
-        state_count_schemas = {
-            field: es_schemas[field]
-            for field in ("states", "focus_state")
-            if field in es_schemas
-        }
-        active_space_schemas = {
-            field: es_schemas[field]
-            for field in ("active_electrons", "active_orbitals")
-            if field in es_schemas
-        }
 
         # Non-standard inputs
         nsi_fields = ['first_line', 'blocks', 'restart_files']
@@ -584,36 +574,20 @@ class QMInput(Model):
                 "oneOf": [
                     {
                         "properties": {
-                            "method": {"enum": ["CASSCF", "DFTMRCI"]},
-                            **state_count_schemas,
-                            **active_space_schemas,
+                            "method": {"enum": ["CASSCF", "DFTMRCI"]}
                         }
                     },
                     {
                         "properties": {
-                            "method": {"enum": ["TDDFT"]},
-                            "functional": functional_schema,
-                            **state_count_schemas,
-                        },
-                        "required": ["functional"] if functional_schema else []
-                    },
-                    {
-                        "properties": {
-                            "method": {"enum": ["DFT"]},
+                            "method": {"enum": ["DFT", "TDDFT"]},
                             "functional": functional_schema
                         },
                         "required": ["functional"] if functional_schema else []
                     },
                     {
                         "properties": {
-                            "method": {"enum": ["CIS", "RPA"]},
-                            **state_count_schemas,
-                        }
-                    },
-                    {
-                        "properties": {
                             "method": {
-                                "not": {"enum": ["CASSCF", "DFTMRCI", "DFT", "TDDFT", "CIS", "RPA"]}
+                                "not": {"enum": ["CASSCF", "DFTMRCI", "DFT", "TDDFT"]}
                             }
                         }
                     }

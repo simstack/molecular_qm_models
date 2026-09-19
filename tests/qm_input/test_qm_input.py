@@ -34,30 +34,14 @@ def test_ui_schema_shows_active_space_for_casscf():
         assert "DFTMRCI" in options
 
 
-def test_json_schema_method_branches_include_states_and_focus_state():
-    tddft_branch = None
-    casscf_branch = None
-    for branch in QMInput.json_schema()["dependencies"]["method"]["oneOf"]:
-        method_schema = branch.get("properties", {}).get("method", {})
-        if method_schema.get("enum") == ["TDDFT"]:
-            tddft_branch = branch
-        elif method_schema.get("enum") == ["CASSCF", "DFTMRCI"]:
-            casscf_branch = branch
-    assert tddft_branch is not None
-    assert casscf_branch is not None
-
-    tddft_properties = tddft_branch["properties"]
-    assert "states" in tddft_properties
-    assert "focus_state" in tddft_properties
-    assert "functional" in tddft_properties
-    assert "active_orbitals" not in tddft_properties
-    assert "active_electrons" not in tddft_properties
-
-    casscf_properties = casscf_branch["properties"]
-    assert "states" in casscf_properties
-    assert "focus_state" in casscf_properties
-    assert "active_orbitals" in casscf_properties
-    assert "active_electrons" in casscf_properties
+def test_json_schema_keeps_original_method_branches():
+    method_one_of = QMInput.json_schema()["dependencies"]["method"]["oneOf"]
+    enums = [branch.get("properties", {}).get("method") for branch in method_one_of]
+    assert {"enum": ["CASSCF", "DFTMRCI"]} in enums
+    assert {"enum": ["DFT", "TDDFT"]} in enums
+    assert "states" not in method_one_of[0]["properties"]
+    assert "focus_state" not in method_one_of[0]["properties"]
+    assert "functional" in method_one_of[1]["properties"]
 
 
 def test_tddft_keeps_states_when_checkbox_is_off(water):
