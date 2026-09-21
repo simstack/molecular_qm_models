@@ -18,12 +18,23 @@ def test_ui_schema_shows_focus_state_with_the_excited_states_checkbox():
     assert ui["focus_state"]["ui:condition"] == {"excited_states": True}
 
 
-def test_ui_schema_forces_excited_states_on_for_tddft_and_casscf():
+def test_ui_schema_keeps_excited_states_checkbox_switchable():
     ui = QMInput.ui_schema()
-    options = _method_options(ui["excited_states"]["ui:disabledCondition"])
-    assert "TDDFT" in options
-    assert "CASSCF" in options
-    assert ui["excited_states"]["ui:disabledValue"] is True
+    assert ui["excited_states"]["ui:widget"] == "checkbox"
+    assert "ui:disabledCondition" not in ui["excited_states"]
+    assert "ui:disabledValue" not in ui["excited_states"]
+
+
+def test_json_schema_keeps_states_editable_when_excited_states_is_off():
+    one_of = QMInput.json_schema()["dependencies"]["excited_states"]["oneOf"]
+    off_props = one_of[0]["properties"]
+    on_props = one_of[1]["properties"]
+    assert off_props["excited_states"] == {"const": False}
+    assert "states" in off_props
+    assert "focus_state" in off_props
+    assert on_props["excited_states"] == {"const": True}
+    assert "states" in on_props
+    assert "focus_state" in on_props
 
 
 def test_ui_schema_shows_active_space_for_casscf():

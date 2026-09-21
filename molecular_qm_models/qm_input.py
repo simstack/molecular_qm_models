@@ -474,9 +474,15 @@ class QMInput(Model):
         elprop_fields = ["Dipole", "Quadrupole", "Polar", "Hyperpol", "HyperpolFrequencynm", "PolarVelocity", "PolarDipQuad", "PolarQuadQuad"]
         elprop_schemas = {field: prop_schemas.pop(field) for field in elprop_fields if field in prop_schemas}
 
-        # Excited state fields
+        # Excited state fields. states/focus_state stay in both oneOf branches so
+        # leftover form values are real editable properties, not greyed extras.
         es_fields = ["states", "focus_state", "active_electrons", "active_orbitals"]
         es_schemas = {field: prop_schemas.pop(field) for field in es_fields if field in prop_schemas}
+        state_count_schemas = {
+            field: es_schemas[field]
+            for field in ("states", "focus_state")
+            if field in es_schemas
+        }
 
         # Non-standard inputs
         nsi_fields = ['first_line', 'blocks', 'restart_files']
@@ -513,7 +519,8 @@ class QMInput(Model):
                 "oneOf": [
                     {
                         "properties": {
-                            "excited_states": {"const": False}
+                            "excited_states": {"const": False},
+                            **state_count_schemas,
                         }
                     },
                     {
@@ -657,15 +664,9 @@ class QMInput(Model):
             "Hyperpol": True
         }
 
-        # TDDFT/CASSCF force the checkbox on so states and focus_state appear
-        # without an extra click. Ground-state methods still use the toggle.
         ui_schema["excited_states"] = {
             "ui:widget": "checkbox",
             "ui:title": "Calculate excited states",
-            "ui:disabledCondition": {
-                "method": {"ui:options": list(EXCITED_STATE_METHODS)}
-            },
-            "ui:disabledValue": True,
         }
 
         # Same visibility for both fields. Do not AND a CASSCF-only method
