@@ -366,7 +366,8 @@ class InternalDihedralCoordinate(InternalCoordinateBase):
 
         axis = b2 / np.linalg.norm(b2)
 
-        rot_matrix = InternalAngleCoordinate._get_rotation_matrix(axis, np.radians(diff))
+        # The quaternion matrix turns the opposite way from the dihedral atan2.
+        rot_matrix = InternalAngleCoordinate._get_rotation_matrix(axis, np.radians(-diff))
 
         for idx in self.moving_atoms:
             atom = molecule.atoms[idx]
