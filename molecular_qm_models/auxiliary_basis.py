@@ -94,6 +94,7 @@ class AuxBasis(EmbeddedModel):
             "6-31g": ["AutoAux"],
             "6-31g*": ["AutoAux"],
             "6-31g**": ["AutoAux"],
+            "6-31+G(d,p)": ["AutoAux"],
         }
         
         # Create the anyOf construct for the schema

@@ -17,6 +17,7 @@ class BasisSetEnum(str, Enum):
     B631G = "6-31G"
     B631G_star = "6-31G*"
     B631G_star_star = "6-31G**"
+    B631_plus_G_dp = "6-31+G(d,p)"
     cc_pVDZ = "cc-pVDZ"
     cc_pVTZ = "cc-pVTZ"
     cc_pVQZ = "cc-pVQZ"
