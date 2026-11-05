@@ -1,6 +1,7 @@
 import hashlib
 import math
 from copy import copy
+from itertools import combinations
 from typing import Dict, Any, List, Optional, Iterator
 from odmantic import Model, Field, EmbeddedModel, ObjectId
 from pydantic import model_validator
@@ -11,6 +12,15 @@ from simstack.models import simstack_model
 from simstack.models.base_lists import ObjectListMixin
 from simstack.util.generate_ui_schema import generate_ui_schema
 logger = logging.getLogger(__name__)
+
+# Molecules larger than this many atoms use the bounded (local-neighbourhood)
+# hash below. The exhaustive all-atom enumeration of angles/triangle
+# areas/tetrahedron volumes is O(n^5) and infeasible for realistic molecules
+# (a 265-atom system takes hours in pure Python).
+_MAX_FULL_ALGORITHM_ATOMS = 60
+# Number of nearest atoms used for the angular/area/volume descriptors when the
+# bounded path is active.
+_NEIGHBORHOOD_ATOMS = 24
 
 
 @simstack_model
@@ -436,10 +446,19 @@ class Molecule(Model):
         if not self.atoms:
             return hashlib.md5(b"empty_molecule").hexdigest()
 
-        # Extract coordinates and elements
+        # Coordinates and elements
         coords = [[atom.x, atom.y, atom.z] for atom in self.atoms]
         elements = [atom.element for atom in self.atoms]
         n_atoms = len(coords)
+
+        # For large molecules the exhaustive enumeration of angles, triangle
+        # areas and tetrahedron volumes over *all* atom tuples is O(n^5) (each
+        # 265-atom structure would take hours). Molecules above the threshold
+        # therefore restrict these higher-order descriptors to the local
+        # neighbourhood of each atom (see constants above). Molecules at or
+        # below the threshold use the exact legacy algorithm, so their hashes
+        # (and therefore existing registered results) stay unchanged.
+        use_full_algorithm = n_atoms <= _MAX_FULL_ALGORITHM_ATOMS
 
         def fix_negative_zero(x):
             """Convert -0.0 to 0.0 to ensure consistent hashing."""
@@ -519,7 +538,7 @@ class Molecule(Model):
         # Create comprehensive geometric descriptors for each atom
         atom_descriptors = []
         for i, element in enumerate(elements):
-            # 1. Distance-based environment (as before)
+            # 1. Distance-based environment (all atoms; O(n^2))
             distances = []
             for j in range(n_atoms):
                 if i != j:
@@ -527,38 +546,50 @@ class Molecule(Model):
                     distances.append((dist, elements[j]))
             distances.sort()
 
+            if use_full_algorithm:
+                selected = [j for j in range(n_atoms) if j != i]
+            else:
+                # Local neighbourhood: the K atoms nearest to i. Ties are
+                # additionally broken by element name and coordinates so that
+                # the chosen set does not depend on the atom ordering.
+                selected = sorted(
+                    (j for j in range(n_atoms) if j != i),
+                    key=lambda j: (
+                        fix_negative_zero(distance(i, j)),
+                        elements[j],
+                        tuple(coords[j]),
+                    ),
+                )[:_NEIGHBORHOOD_ATOMS]
+
             # 2. Angular environment - angles centered at this atom
             angles = []
-            for j in range(n_atoms):
-                for k in range(j + 1, n_atoms):
-                    if i != j and i != k:
-                        ang = fix_negative_zero(angle(j, i, k))
-                        # Sort element names to ensure invariance to ordering
-                        elem_pair = tuple(sorted([elements[j], elements[k]]))
-                        angles.append((ang, elem_pair))
+            for j, k in combinations(selected, 2):
+                ang = fix_negative_zero(angle(j, i, k))
+                # Sort element names to ensure invariance to ordering
+                elem_pair = tuple(sorted([elements[j], elements[k]]))
+                angles.append((ang, elem_pair))
             angles.sort()
 
             # 3. Triangle areas involving this atom (geometric invariant)
             triangles = []
-            for j in range(n_atoms):
-                for k in range(j + 1, n_atoms):
-                    if i != j and i != k and j != k:
-                        area = fix_negative_zero(triangle_area(i, j, k))
-                        # Sort element names to ensure invariance to ordering
-                        elem_triple = tuple(sorted([elements[j], elements[k]]))
-                        triangles.append((area, elem_triple))
+            for j, k in combinations(selected, 2):
+                area = fix_negative_zero(triangle_area(i, j, k))
+                # Sort element names to ensure invariance to ordering
+                elem_triple = tuple(sorted([elements[j], elements[k]]))
+                triangles.append((area, elem_triple))
             triangles.sort()
 
             # 4. Tetrahedron volumes involving this atom (chirality-sensitive)
             tetrahedra = []
-            for j in range(n_atoms):
-                for k in range(j + 1, n_atoms):
-                    for l in range(k + 1, n_atoms):
-                        if len(set([i, j, k, l])) == 4:
-                            vol = fix_negative_zero(tetrahedron_volume(i, j, k, l, preserve_chirality))
-                            # Sort element names to ensure invariance to ordering
-                            elem_quad = tuple(sorted([elements[j], elements[k], elements[l]]))
-                            tetrahedra.append((vol, elem_quad))
+            for j, k, l in combinations(selected, 3):
+                vol = fix_negative_zero(
+                    tetrahedron_volume(i, j, k, l, preserve_chirality)
+                )
+                # Sort element names to ensure invariance to ordering
+                elem_quad = tuple(
+                    sorted([elements[j], elements[k], elements[l]])
+                )
+                tetrahedra.append((vol, elem_quad))
             tetrahedra.sort()
 
             # 5. Create comprehensive descriptor
