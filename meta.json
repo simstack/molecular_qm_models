@@ -1,0 +1,16 @@
+{
+  "title": "Molecular QM Models",
+  "workflow_environment": "SimStack",
+  "description": "Shared molecular data models for electronic-structure calculations in SimStack, including molecules, quantum-mechanical inputs and results, and nodes for importing molecule lists, building molecular databases and analysing conformer diversity.",
+  "authors": [
+    "Wolfgang Wenzel",
+    "Phillip Dullinger"
+  ],
+  "release": "v0.6.1",
+  "keywords": [
+    "SimStack",
+    "molecular quantum mechanics",
+    "molecular models",
+    "conformer analysis"
+  ]
+}
