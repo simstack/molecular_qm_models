@@ -13,14 +13,17 @@ from simstack.models.base_lists import ObjectListMixin
 from simstack.util.generate_ui_schema import generate_ui_schema
 logger = logging.getLogger(__name__)
 
-# Molecules larger than this many atoms skip the exhaustive O(n^5) geometric
-# descriptor enumeration (angles, triangle areas, tetrahedron volumes) that is
-# infeasible for realistic molecules (a 265-atom system takes hours in pure
-# Python). They instead hash the raw geometry - each atom's element and its
-# rounded coordinates - directly. Molecules at or below the threshold keep the
-# exact legacy hash byte-for-byte, so all previously registered arg_hashes stay
-# valid.
-_MAX_FULL_ALGORITHM_ATOMS = 60
+# Molecules larger than this many atoms skip the exhaustive O(n^4) geometric
+# descriptor enumeration (angles, triangle areas, tetrahedron volumes) that
+# becomes too slow for realistic molecules. They instead hash the O(n^2)
+# pairwise distance matrix in the input atom order (rotation- and
+# translation-invariant). Molecules at or below the threshold keep the exact
+# legacy hash byte-for-byte, so all previously registered arg_hashes stay
+# valid. The threshold itself was chosen empirically (the benchmark in the docs
+# measured up to 85 atoms): the legacy algorithm needs ~85 s at 80 atoms and
+# ~126 s at 85 atoms, so 80 atoms is the largest size that still fits the
+# ~120 s budget with margin.
+_MAX_FULL_ALGORITHM_ATOMS = 80
 
 
 @simstack_model
@@ -441,14 +444,15 @@ class Molecule(Model):
         Molecules with at most ``_MAX_FULL_ALGORITHM_ATOMS`` atoms use the
         legacy algorithm, which is invariant to atom reordering, translation and
         rotation and preserves full 3D geometric information (distances, angles,
-        triangle areas, tetrahedron volumes).
+        triangle areas, tetrahedron volumes). Its exhaustive descriptor
+        enumeration is O(n^4), so only small molecules fit in the time budget.
 
-        Larger molecules hash the raw geometry directly: each atom's element and
-        its coordinates rounded to ``precision`` decimals, canonically sorted so
-        the hash stays invariant to atom reordering. This deliberately does NOT
-        provide translation/rotation invariance (a moved or rotated molecule
-        hashes differently), which avoids the O(n^5) descriptor enumeration
-        entirely and makes the hash O(n log n).
+        Larger molecules hash the **pairwise distance matrix in the input atom
+        order** instead: O(n^2) to compute, rotation- and translation-invariant,
+        with every cell rounded to ``precision`` decimals. The input atom
+        ordering is treated as part of the representation (reordering the atoms
+        changes the hash); an optional canonical ordering can restore
+        reorder-invariance at O(n^2 log n) cost if it ever becomes necessary.
 
         :param precision: Number of decimal places to round values to
         :param preserve_chirality: If True, distinguishes between stereoisomers (mirror images)
@@ -467,25 +471,30 @@ class Molecule(Model):
             rounded = round(x, precision)
             return 0.0 if rounded == 0.0 else rounded
 
-        # Fast path for large molecules: hash the raw geometry (element +
-        # coordinates) directly. Sorting by (element, x, y, z) keeps the hash
-        # invariant to atom ordering without any invariant-descriptor machinery.
-        # Translation/rotation invariance is deliberately dropped - the hash
-        # changes if the molecule moves, which is perfectly acceptable here and
-        # bypasses the O(n^5) descriptor enumeration entirely.
+        # Fast path for large molecules: hash the pairwise distance matrix in
+        # the input atom order. Distances are rotation- and translation-
+        # invariant, and the matrix is O(n^2) to compute (no tetrahedra, so no
+        # O(n^4)/O(n^5) descriptor enumeration). The atom ordering of the input
+        # is treated as part of the representation: reordering the atom list
+        # changes the hash. Distances are rounded to the hash `precision`, so
+        # sub-precision float noise does not change the hash.
         if n_atoms > _MAX_FULL_ALGORITHM_ATOMS:
-            canonical_geometry = sorted(
-                (
-                    elements[i],
-                    fix_negative_zero(coords[i][0]),
-                    fix_negative_zero(coords[i][1]),
-                    fix_negative_zero(coords[i][2]),
-                )
-                for i in range(n_atoms)
-            )
-            return hashlib.md5(
-                str(canonical_geometry).encode("utf-8")
-            ).hexdigest()
+            rows = []
+            for i in range(n_atoms):
+                xi, yi, zi = coords[i]
+                row = []
+                for j in range(n_atoms):
+                    if i == j:
+                        continue
+                    xj, yj, zj = coords[j]
+                    d = math.sqrt(
+                        (xi - xj) * (xi - xj)
+                        + (yi - yj) * (yi - yj)
+                        + (zi - zj) * (zi - zj)
+                    )
+                    row.append((fix_negative_zero(d), elements[j]))
+                rows.append((elements[i], tuple(row)))
+            return hashlib.md5(str(rows).encode("utf-8")).hexdigest()
 
         def distance(i, j):
             """Calculate distance between atoms i and j."""
