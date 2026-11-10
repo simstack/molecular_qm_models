@@ -13,14 +13,14 @@ from simstack.models.base_lists import ObjectListMixin
 from simstack.util.generate_ui_schema import generate_ui_schema
 logger = logging.getLogger(__name__)
 
-# Molecules larger than this many atoms use the bounded (local-neighbourhood)
-# hash below. The exhaustive all-atom enumeration of angles/triangle
-# areas/tetrahedron volumes is O(n^5) and infeasible for realistic molecules
-# (a 265-atom system takes hours in pure Python).
+# Molecules larger than this many atoms skip the exhaustive O(n^5) geometric
+# descriptor enumeration (angles, triangle areas, tetrahedron volumes) that is
+# infeasible for realistic molecules (a 265-atom system takes hours in pure
+# Python). They instead hash the raw geometry - each atom's element and its
+# rounded coordinates - directly. Molecules at or below the threshold keep the
+# exact legacy hash byte-for-byte, so all previously registered arg_hashes stay
+# valid.
 _MAX_FULL_ALGORITHM_ATOMS = 60
-# Number of nearest atoms used for the angular/area/volume descriptors when the
-# bounded path is active.
-_NEIGHBORHOOD_ATOMS = 24
 
 
 @simstack_model
@@ -436,8 +436,19 @@ class Molecule(Model):
 
     def complex_hash(self, precision: int = 3, preserve_chirality: bool = False) -> str:
         """
-        Generate a hash that is invariant to atom reordering, translation, and rotation,
-        while preserving complete 3D geometric information including angles.
+        Generate a deterministic hash of the molecular geometry.
+
+        Molecules with at most ``_MAX_FULL_ALGORITHM_ATOMS`` atoms use the
+        legacy algorithm, which is invariant to atom reordering, translation and
+        rotation and preserves full 3D geometric information (distances, angles,
+        triangle areas, tetrahedron volumes).
+
+        Larger molecules hash the raw geometry directly: each atom's element and
+        its coordinates rounded to ``precision`` decimals, canonically sorted so
+        the hash stays invariant to atom reordering. This deliberately does NOT
+        provide translation/rotation invariance (a moved or rotated molecule
+        hashes differently), which avoids the O(n^5) descriptor enumeration
+        entirely and makes the hash O(n log n).
 
         :param precision: Number of decimal places to round values to
         :param preserve_chirality: If True, distinguishes between stereoisomers (mirror images)
@@ -451,19 +462,30 @@ class Molecule(Model):
         elements = [atom.element for atom in self.atoms]
         n_atoms = len(coords)
 
-        # For large molecules the exhaustive enumeration of angles, triangle
-        # areas and tetrahedron volumes over *all* atom tuples is O(n^5) (each
-        # 265-atom structure would take hours). Molecules above the threshold
-        # therefore restrict these higher-order descriptors to the local
-        # neighbourhood of each atom (see constants above). Molecules at or
-        # below the threshold use the exact legacy algorithm, so their hashes
-        # (and therefore existing registered results) stay unchanged.
-        use_full_algorithm = n_atoms <= _MAX_FULL_ALGORITHM_ATOMS
-
         def fix_negative_zero(x):
             """Convert -0.0 to 0.0 to ensure consistent hashing."""
             rounded = round(x, precision)
             return 0.0 if rounded == 0.0 else rounded
+
+        # Fast path for large molecules: hash the raw geometry (element +
+        # coordinates) directly. Sorting by (element, x, y, z) keeps the hash
+        # invariant to atom ordering without any invariant-descriptor machinery.
+        # Translation/rotation invariance is deliberately dropped - the hash
+        # changes if the molecule moves, which is perfectly acceptable here and
+        # bypasses the O(n^5) descriptor enumeration entirely.
+        if n_atoms > _MAX_FULL_ALGORITHM_ATOMS:
+            canonical_geometry = sorted(
+                (
+                    elements[i],
+                    fix_negative_zero(coords[i][0]),
+                    fix_negative_zero(coords[i][1]),
+                    fix_negative_zero(coords[i][2]),
+                )
+                for i in range(n_atoms)
+            )
+            return hashlib.md5(
+                str(canonical_geometry).encode("utf-8")
+            ).hexdigest()
 
         def distance(i, j):
             """Calculate distance between atoms i and j."""
@@ -546,20 +568,8 @@ class Molecule(Model):
                     distances.append((dist, elements[j]))
             distances.sort()
 
-            if use_full_algorithm:
-                selected = [j for j in range(n_atoms) if j != i]
-            else:
-                # Local neighbourhood: the K atoms nearest to i. Ties are
-                # additionally broken by element name and coordinates so that
-                # the chosen set does not depend on the atom ordering.
-                selected = sorted(
-                    (j for j in range(n_atoms) if j != i),
-                    key=lambda j: (
-                        fix_negative_zero(distance(i, j)),
-                        elements[j],
-                        tuple(coords[j]),
-                    ),
-                )[:_NEIGHBORHOOD_ATOMS]
+            # All atoms (the legacy path below runs only for <= threshold)
+            selected = [j for j in range(n_atoms) if j != i]
 
             # 2. Angular environment - angles centered at this atom
             angles = []
