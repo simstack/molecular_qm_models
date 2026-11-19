@@ -1,4 +1,10 @@
-from __future__ import annotations
+# NOTE: this module intentionally does NOT use `from __future__ import
+# annotations`. simstack's `CreateNodeTable._build_inputs`
+# (simstack/tables/node_table.py) does `param.annotation.__name__` eagerly for
+# every input; PEP 563 string annotations make that raise
+# `AttributeError: 'str' object has no attribute '__name__'` and drop the
+# input mapping during `create_node_table`. All names used in annotations are
+# imported at module level, so eager evaluation is safe here.
 
 from typing import List, Optional, Tuple
 
