@@ -29,5 +29,9 @@ packages = ["molecular_qm_models"]
 molecular_qm_models = "molecular_qm_models"
 
 [tool.uv.sources]
-simstack = { git = "https://github.com/simstack/simstack.git", branch = "main" }
+# Pin to the same simstack release the simstack-model deployment env uses
+# (v2.0.1.post6 == commit ea16489e). Previously `branch = "main"` which made
+# `uv lock`/`uv sync` in the parent repo fail with "conflicting URLs for
+# package simstack" (@main vs @v2.0.1.post6).
+simstack = { git = "https://github.com/simstack/simstack.git", rev = "v2.0.1.post6" }
 
