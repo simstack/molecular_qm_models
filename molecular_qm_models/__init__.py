@@ -1,4 +1,5 @@
 from .molecule import Atom, Molecule, MoleculeList
+from .annotated_molecule import AnnotatedMolecule, BondAnnotation, SphereAnnotation
 from .molecule_snapshot import MoleculeSnapshot, geometry_hash_from_molecule
 from .qm_input import QMInput, QMMethod, SCFAccuracy, OptimizationAccuracy, GridType
 from .qm_result import QMResult, QMThermoResult
@@ -20,6 +21,9 @@ __all__ = [
     "Atom",
     "Molecule",
     "MoleculeList",
+    "AnnotatedMolecule",
+    "SphereAnnotation",
+    "BondAnnotation",
     "MoleculeSnapshot",
     "geometry_hash_from_molecule",
     "QMInput",
